@@ -12,8 +12,11 @@ import (
 //=======================================
 
 func parseCommit(commitLineStr string) (string, string, bool) {
-	re := regexp.MustCompile(`(?P<commit>[0-9a-z]*)\s(?P<message>.*)`)
+	// "85d8658733f73ae6d5407e8e4c2b81a5f2ed016c first change"
+	re := regexp.MustCompile(`(?P<commit>^[0-9a-z]+)\s(?P<message>.+)`)
 	results := re.FindAllStringSubmatch(commitLineStr, -1)
+
+	fmt.Printf("results: %#v\n", results)
 
 	for _, v := range results {
 		commitHash := v[1]
@@ -36,7 +39,7 @@ func LocalBranches() ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	return splitByNewLine(out), nil
+	return splitByNewLineAndStrip(out), nil
 }
 
 // ListTags ...
@@ -45,7 +48,7 @@ func ListTags() ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	return splitByNewLine(out), nil
+	return splitByNewLineAndStrip(out), nil
 }
 
 // CurrentBranchName ...
@@ -113,7 +116,7 @@ func CommitMessages(startCommit, endCommit string) ([]map[string]string, error) 
 		return []map[string]string{}, err
 	}
 
-	commitList := splitByNewLine(out)
+	commitList := splitByNewLineAndStrip(out)
 
 	commitMapList := []map[string]string{}
 	isRelevantCommit := (startCommit == "") // collecting from repo init if no start commit

@@ -14,11 +14,6 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-const (
-	initialCommitStr = "initial commit"
-	currentStateStr  = "current state"
-)
-
 //=======================================
 // Utility
 //=======================================
@@ -84,7 +79,7 @@ func askForStartState() (string, error) {
 		return "", err
 	}
 
-	states := append([]string{initialCommitStr}, tags...)
+	states := append([]string{configs.InitialCommitStr}, tags...)
 
 	fmt.Println()
 	startState, err := goinp.SelectFromStrings("Select release start state!", states)
@@ -92,7 +87,7 @@ func askForStartState() (string, error) {
 		return "", err
 	}
 
-	if startState == initialCommitStr {
+	if startState == configs.InitialCommitStr {
 		startState = ""
 	}
 
@@ -106,7 +101,7 @@ func askForEndState(startState string) (string, error) {
 	}
 
 	// disclude all statets before the from state
-	states := append(tags, currentStateStr)
+	states := append(tags, configs.CurrentStateStr)
 	fromStateIdx := -1
 	for idx, state := range states {
 		if state == startState {
@@ -123,7 +118,7 @@ func askForEndState(startState string) (string, error) {
 		log.Fatalf("Failed to select state, error: %#v", err)
 	}
 
-	if endState == currentStateStr {
+	if endState == configs.CurrentStateStr {
 		endState = ""
 	}
 
@@ -163,11 +158,11 @@ func getCommitHashes(startState, endState string) (string, string, error) {
 
 func writeChnagelog(changelogPath, startState, endState string, commits []map[string]string) error {
 	if startState == "" {
-		startState = initialCommitStr
+		startState = configs.InitialCommitStr
 	}
 
 	if endState == "" {
-		endState = currentStateStr
+		endState = configs.CurrentStateStr
 	}
 
 	changelog := "\n"

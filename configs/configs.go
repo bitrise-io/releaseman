@@ -7,10 +7,12 @@ import (
 )
 
 const (
-	repoCreateStr   = "repo create"
-	currentStateStr = "current state"
 	// DefaultConfigPth ...
 	DefaultConfigPth = "./config.yml"
+	//InitialCommitStr ...
+	InitialCommitStr = "initial commit"
+	// CurrentStateStr ...
+	CurrentStateStr = "current state"
 )
 
 var (
@@ -47,9 +49,13 @@ func NewReleaseConfigFromFile(pth string) (ReleaseConfig, error) {
 	if err != nil {
 		return ReleaseConfig{}, err
 	}
+	return NewReleaseConfigFromBytes(bytes)
+}
 
+// NewReleaseConfigFromBytes ...
+func NewReleaseConfigFromBytes(bytes []byte) (ReleaseConfig, error) {
 	config := ReleaseConfig{}
-	if err = yaml.Unmarshal(bytes, &config); err != nil {
+	if err := yaml.Unmarshal(bytes, &config); err != nil {
 		return ReleaseConfig{}, err
 	}
 

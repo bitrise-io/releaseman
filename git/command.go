@@ -13,9 +13,9 @@ import (
 
 // PrintableCommand ...
 type PrintableCommand struct {
-	rawCommand string
-	name       string
-	args       []string
+	RawCommand string
+	Name       string
+	Args       []string
 }
 
 // NewPrintableCommand ...
@@ -27,9 +27,9 @@ func NewPrintableCommand(commandParts ...string) PrintableCommand {
 	}
 
 	return PrintableCommand{
-		rawCommand: strings.Join(commandParts, " "),
-		name:       name,
-		args:       args,
+		RawCommand: strings.Join(commandParts, " "),
+		Name:       name,
+		Args:       args,
 	}
 }
 
@@ -37,9 +37,9 @@ func NewPrintableCommand(commandParts ...string) PrintableCommand {
 func (command PrintableCommand) Run() (string, error) {
 	log.Debugf("=> (%#v)", command)
 
-	out, err := cmdex.RunCommandAndReturnCombinedStdoutAndStderr(command.name, command.args...)
+	out, err := cmdex.RunCommandAndReturnCombinedStdoutAndStderr(command.Name, command.Args...)
 	if err != nil {
-		log.Fatalf("Failed to execute:\ncommand:(%s),\noutput:(%s),\nerror:(%#v)", command.rawCommand, out, err)
+		log.Fatalf("Failed to execute:\ncommand:(%s),\noutput:(%s),\nerror:(%#v)", command.RawCommand, out, err)
 	}
 	log.Debugf("output:\n(%s)", out)
 
@@ -50,7 +50,7 @@ func (command PrintableCommand) Run() (string, error) {
 // Util
 //=======================================
 
-func splitByNewLine(str string) []string {
+func splitByNewLineAndStrip(str string) []string {
 	split := strings.Split(str, "\n")
 	out := []string{}
 	for _, part := range split {
