@@ -1,4 +1,4 @@
-development_branch: master
+development_branch: develop
 release_branch: master
 start_state: ""
 end_state: ""

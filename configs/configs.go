@@ -1,14 +1,15 @@
 package configs
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"fmt"
+
 	"github.com/bitrise-io/go-utils/fileutil"
 	"gopkg.in/yaml.v2"
 )
 
 const (
 	// DefaultConfigPth ...
-	DefaultConfigPth = "./config.yml"
+	DefaultConfigPth = "./release_config.yml"
 	//InitialCommitStr ...
 	InitialCommitStr = "initial commit"
 	// CurrentStateStr ...
@@ -24,42 +25,56 @@ var (
 // Models
 //=======================================
 
-/*
-development_branch: master
-release_branch: master
-start_state: ""
-end_state: ""
-changelog_path: "./changelog"
-release_version: "1.1.0"
-*/
-
-// ReleaseConfig ...
-type ReleaseConfig struct {
+// Release ...
+type Release struct {
 	DevelopmentBranch string `yaml:"development_branch"`
 	ReleaseBranch     string `yaml:"release_branch"`
-	StartState        string `yaml:"start_state"`
-	EndState          string `yaml:"end_state"`
-	ChangelogPath     string `yaml:"changelog_path"`
-	ReleaseVersion    string `yaml:"release_version"`
+	Version           string `yaml:"version"`
 }
 
-// NewReleaseConfigFromFile ...
-func NewReleaseConfigFromFile(pth string) (ReleaseConfig, error) {
+// Changelog ...
+type Changelog struct {
+	Path string `yaml:"path"`
+}
+
+// Config ...
+type Config struct {
+	Release   Release   `yaml:"release,omitempty"`
+	Changelog Changelog `yaml:"changelog,omitempty"`
+}
+
+// NewConfigFromFile ...
+func NewConfigFromFile(pth string) (Config, error) {
 	bytes, err := fileutil.ReadBytesFromFile(pth)
 	if err != nil {
-		return ReleaseConfig{}, err
+		return Config{}, err
 	}
-	return NewReleaseConfigFromBytes(bytes)
+	return NewConfigFromBytes(bytes)
 }
 
-// NewReleaseConfigFromBytes ...
-func NewReleaseConfigFromBytes(bytes []byte) (ReleaseConfig, error) {
-	config := ReleaseConfig{}
-	if err := yaml.Unmarshal(bytes, &config); err != nil {
-		return ReleaseConfig{}, err
+// NewConfigFromBytes ...
+func NewConfigFromBytes(bytes []byte) (Config, error) {
+	type FileConfig struct {
+		Release   *Release   `yaml:"release,omitempty"`
+		Changelog *Changelog `yaml:"changelog,omitempty"`
 	}
 
-	log.Debugf("Config: %#v", config)
+	fileConfig := FileConfig{}
+	if err := yaml.Unmarshal(bytes, &fileConfig); err != nil {
+		return Config{}, err
+	}
+
+	fmt.Printf("%#v\n", fileConfig)
+
+	if fileConfig.Release == nil {
+		return Config{}, fmt.Errorf("Invalid configuration: no release configuration defined")
+	}
+
+	config := Config{}
+	config.Release = *fileConfig.Release
+	if fileConfig.Changelog != nil {
+		config.Changelog = *fileConfig.Changelog
+	}
 
 	return config, nil
 }

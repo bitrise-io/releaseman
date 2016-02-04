@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -28,9 +29,9 @@ func printRollBackMessage() {
 	fmt.Println()
 }
 
-func printDoneMessage(config configs.ReleaseConfig) {
+func printDoneMessage(config configs.Config) {
 	fmt.Println()
-	log.Infoln(colorstring.Greenf("v%s released 🚀", config.ReleaseVersion))
+	log.Infoln(colorstring.Greenf("v%s released 🚀", config.Release.Version))
 	log.Infoln("Take a look at your git, and if you are happy with the release, push the changes.")
 }
 
@@ -73,58 +74,6 @@ func askForReleaseBranch() (string, error) {
 	return releaseBranch, nil
 }
 
-func askForStartState() (string, error) {
-	tags, err := git.ListTags()
-	if err != nil {
-		return "", err
-	}
-
-	states := append([]string{configs.InitialCommitStr}, tags...)
-
-	fmt.Println()
-	startState, err := goinp.SelectFromStrings("Select release start state!", states)
-	if err != nil {
-		return "", err
-	}
-
-	if startState == configs.InitialCommitStr {
-		startState = ""
-	}
-
-	return startState, nil
-}
-
-func askForEndState(startState string) (string, error) {
-	tags, err := git.ListTags()
-	if err != nil {
-		return "", err
-	}
-
-	// disclude all statets before the from state
-	states := append(tags, configs.CurrentStateStr)
-	fromStateIdx := -1
-	for idx, state := range states {
-		if state == startState {
-			fromStateIdx = idx
-		}
-	}
-	if fromStateIdx > -1 {
-		states = states[fromStateIdx+1 : len(states)]
-	}
-
-	fmt.Println()
-	endState, err := goinp.SelectFromStrings("Select release end state!", states)
-	if err != nil {
-		log.Fatalf("Failed to select state, error: %#v", err)
-	}
-
-	if endState == configs.CurrentStateStr {
-		endState = ""
-	}
-
-	return endState, nil
-}
-
 func askForReleaseVersion() (string, error) {
 	fmt.Println()
 	return goinp.AskForString("Type in release version!")
@@ -135,55 +84,98 @@ func askForChangelogPath() (string, error) {
 	return goinp.AskForString("Type in changelog path!")
 }
 
-func getCommitHashes(startState, endState string) (string, string, error) {
-	firstCommitHash := ""
-	lastCommitHash := ""
-
-	if startState == "" && endState == "" {
-		firstCommitHash, _ = git.FirstCommit()
-		lastCommitHash, _ = git.LatestCommit()
-	} else if startState == "" {
-		firstCommitHash, _ = git.FirstCommit()
-		lastCommitHash, _ = git.CommitHashOfTag(endState)
-	} else if endState == "" {
-		firstCommitHash, _ = git.CommitHashOfTag(startState)
-		lastCommitHash, _ = git.LatestCommit()
-	} else {
-		firstCommitHash, _ = git.CommitHashOfTag(startState)
-		lastCommitHash, _ = git.CommitHashOfTag(endState)
+func firstCommitAfterTag(taggedCommit git.CommitModel, commits []git.CommitModel) (git.CommitModel, bool) {
+	for _, commit := range commits {
+		if taggedCommit.Date.Sub(commit.Date) < 0 {
+			return commit, true
+		}
 	}
-
-	return firstCommitHash, lastCommitHash, nil
+	return git.CommitModel{}, false
 }
 
-func writeChnagelog(changelogPath, startState, endState string, commits []map[string]string) error {
-	if startState == "" {
-		startState = configs.InitialCommitStr
-	}
+func sectionHeader(startTag, endTag string) string {
+	return fmt.Sprintf("%s - %s\n", startTag, endTag)
+}
 
-	if endState == "" {
-		endState = configs.CurrentStateStr
-	}
-
-	changelog := "\n"
-	changelog += fmt.Sprintf("%s - %s\n", startState, endState)
+func sectionBody(commits []git.CommitModel) string {
+	body := ""
 	for _, commit := range commits {
-		for _, message := range commit {
-			changelog += fmt.Sprintf(" * %s\n", message)
+		body += fmt.Sprintf(" * %s\n", commit.Message)
+	}
+	body += "\n"
+	return body
+}
+
+func reverse(commits []git.CommitModel) []git.CommitModel {
+	reversed := []git.CommitModel{}
+	for i := len(commits) - 1; i >= 0; i-- {
+		reversed = append(reversed, commits[i])
+	}
+	return reversed
+}
+
+func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.CommitModel) []git.CommitModel {
+	relevantCommits := []git.CommitModel{}
+	isRelevantCommit := false
+
+	for _, commit := range commits {
+		if !isRelevantCommit && (startDate == nil || (*startDate).Sub(commit.Date) <= 0) {
+			isRelevantCommit = true
+		}
+
+		if isRelevantCommit && (endDate == nil || (*endDate).Sub(commit.Date) <= 0) {
+			return relevantCommits
+		}
+
+		if isRelevantCommit {
+			relevantCommits = append(relevantCommits, commit)
 		}
 	}
 
-	if exist, err := pathutil.IsPathExists(changelogPath); err != nil {
-		log.Fatalf("Failed to check if path exist (%s), error: %s", changelogPath, err)
-	} else if exist {
-		log.Infoln("   Previous changelog exist, appending current.")
+	return reverse(relevantCommits)
+}
 
-		previousChangeLog, err := fileutil.ReadStringFromFile(changelogPath)
-		if err != nil {
-			log.Fatalf("Failed to append new changelog, error: %s", err)
+func writeChnagelog(changelogPath string, commits, taggedCommits []git.CommitModel, nextVersion string) error {
+	changelog := "\n"
+
+	if len(taggedCommits) > 0 {
+		// Commits between initial commit and first tag
+		relevantCommits := commitsBetween(nil, &(taggedCommits[0].Date), commits)
+		header := sectionHeader("", taggedCommits[0].Tag)
+		body := sectionBody(relevantCommits)
+		if body != "\n" {
+			changelog = header + body + changelog
 		}
 
-		changelog += previousChangeLog
+		if len(taggedCommits) > 1 {
+			// Commits between tags
+			for i := 0; i < len(taggedCommits)-1; i++ {
+				startTaggedCommit := taggedCommits[i]
+				endTaggedCommit := taggedCommits[i+1]
+
+				relevantCommits = commitsBetween(&(startTaggedCommit.Date), &(endTaggedCommit.Date), commits)
+				header := sectionHeader(startTaggedCommit.Tag, endTaggedCommit.Tag)
+				body := sectionBody(relevantCommits)
+				if body != "\n" {
+					changelog = header + body + changelog
+				}
+			}
+		}
+
+		// Commits between last tag and current state
+		relevantCommits = commitsBetween(&(taggedCommits[len(taggedCommits)-1].Date), nil, commits)
+		header = sectionHeader(taggedCommits[len(taggedCommits)-1].Tag, "")
+		body = sectionBody(relevantCommits)
+		if body != "\n" {
+			changelog = header + body + changelog
+		}
+	} else {
+		relevantCommits := commitsBetween(nil, nil, commits)
+		header := sectionHeader("", "")
+		body := sectionBody(relevantCommits)
+		if body != "\n" {
+			changelog = header + body + changelog
+		}
 	}
 
 	return fileutil.WriteStringToFile(changelogPath, changelog)
@@ -206,7 +198,7 @@ func create(c *cli.Context) {
 
 	//
 	// Build config from file
-	config := configs.ReleaseConfig{}
+	config := configs.Config{}
 	configPath := ""
 	if c.IsSet("config") {
 		configPath = c.String("config")
@@ -217,7 +209,7 @@ func create(c *cli.Context) {
 	if exist, err := pathutil.IsPathExists(configPath); err != nil {
 		log.Warnf("Failed to check if path exist, error: %#v", err)
 	} else if exist {
-		config, err = configs.NewReleaseConfigFromFile(configPath)
+		config, err = configs.NewConfigFromFile(configPath)
 		if err != nil {
 			log.Fatalf("Failed to parse release config at (%s), error: %#v", configPath, err)
 		}
@@ -225,13 +217,13 @@ func create(c *cli.Context) {
 
 	var err error
 	if c.IsSet(DevelopmentBranchKey) {
-		config.DevelopmentBranch = c.String(DevelopmentBranchKey)
+		config.Release.DevelopmentBranch = c.String(DevelopmentBranchKey)
 	}
-	if config.DevelopmentBranch == "" {
+	if config.Release.DevelopmentBranch == "" {
 		if configs.IsCIMode {
 			log.Fatalln("Missing required input: development branch")
 		} else {
-			config.DevelopmentBranch, err = askForDevelopmentBranch()
+			config.Release.DevelopmentBranch, err = askForDevelopmentBranch()
 			if err != nil {
 				log.Fatalf("Failed to ask for development branch, error: %s", err)
 			}
@@ -245,76 +237,48 @@ func create(c *cli.Context) {
 		log.Fatalf("Failed to get current branch name, error: %#v", err)
 	}
 
-	if config.DevelopmentBranch != currentBranch {
-		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.DevelopmentBranch)
+	if config.Release.DevelopmentBranch != currentBranch {
+		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
 
 		fmt.Println()
-		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.DevelopmentBranch))
+		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch))
 		if err != nil {
 			log.Fatalf("Failed to ask for checkout, error: %#v", err)
 		}
 
 		if !checkout {
-			log.Fatalf("Current branch should be the development branch (%s)!", config.DevelopmentBranch)
+			log.Fatalf("Current branch should be the development branch (%s)!", config.Release.DevelopmentBranch)
 		}
 
-		if err := git.CheckoutBranch(config.DevelopmentBranch); err != nil {
-			log.Fatalf("Failed to checkout branch (%s), error: %#v", config.DevelopmentBranch, err)
+		if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
+			log.Fatalf("Failed to checkout branch (%s), error: %#v", config.Release.DevelopmentBranch, err)
 		}
 	}
 	//
 	//
 
 	if c.IsSet(ReleaseBranchKey) {
-		config.ReleaseBranch = c.String(ReleaseBranchKey)
+		config.Release.ReleaseBranch = c.String(ReleaseBranchKey)
 	}
-	if config.ReleaseBranch == "" {
+	if config.Release.ReleaseBranch == "" {
 		if configs.IsCIMode {
 			log.Fatalln("Missing required input: release branch")
 		} else {
-			config.ReleaseBranch, err = askForReleaseBranch()
+			config.Release.ReleaseBranch, err = askForReleaseBranch()
 			if err != nil {
 				log.Fatalf("Failed to ask for release branch, error: %s", err)
 			}
 		}
 	}
 
-	if c.IsSet(StartStateKey) {
-		config.StartState = c.String(StartStateKey)
-	}
-	if config.StartState == "" {
-		if configs.IsCIMode {
-			// In CI it means start from repo create
-		} else {
-			config.StartState, err = askForStartState()
-			if err != nil {
-				log.Fatalf("Failed to ask for start state, error: %s", err)
-			}
-		}
-	}
-
-	if c.IsSet(EndStateKey) {
-		config.EndState = c.String(EndStateKey)
-	}
-	if config.EndState == "" {
-		if configs.IsCIMode {
-			// In CI it means create changelog until current state
-		} else {
-			config.EndState, err = askForEndState(config.StartState)
-			if err != nil {
-				log.Fatalf("Failed to ask for end state, error: %s", err)
-			}
-		}
-	}
-
 	if c.IsSet(ReleaseVersionKey) {
-		config.ReleaseVersion = c.String(ReleaseVersionKey)
+		config.Release.Version = c.String(ReleaseVersionKey)
 	}
-	if config.ReleaseVersion == "" {
+	if config.Release.Version == "" {
 		if configs.IsCIMode {
 			log.Fatalln("Missing required input: release version")
 		} else {
-			config.ReleaseVersion, err = askForReleaseVersion()
+			config.Release.Version, err = askForReleaseVersion()
 			if err != nil {
 				log.Fatalf("Failed to ask for release version, error: %s", err)
 			}
@@ -322,13 +286,13 @@ func create(c *cli.Context) {
 	}
 
 	if c.IsSet(ChangelogPathKey) {
-		config.ChangelogPath = c.String(ChangelogPathKey)
+		config.Changelog.Path = c.String(ChangelogPathKey)
 	}
-	if config.ChangelogPath == "" {
+	if config.Changelog.Path == "" {
 		if configs.IsCIMode {
 			log.Fatalln("Missing required input: changelog path")
 		} else {
-			config.ChangelogPath, err = askForChangelogPath()
+			config.Changelog.Path, err = askForChangelogPath()
 			if err != nil {
 				log.Fatalf("Failed to ask for changelog path, error: %s", err)
 			}
@@ -339,19 +303,10 @@ func create(c *cli.Context) {
 	// Print config
 	fmt.Println()
 	log.Infof("Your config:")
-	log.Infof(" * Development branch: %s", config.DevelopmentBranch)
-	log.Infof(" * Release branch: %s", config.ReleaseBranch)
-	if config.StartState == "" && config.EndState == "" {
-		log.Infof(" * Create release from initial commit until current state")
-	} else if config.StartState == "" {
-		log.Infof(" * Create release from initial commit until %s", config.EndState)
-	} else if config.EndState == "" {
-		log.Infof(" * Create release from %s until current state", config.StartState)
-	} else {
-		log.Infof(" * Create release from %s until %s", config.StartState, config.EndState)
-	}
-	log.Infof(" * Changelog path: %s", config.ChangelogPath)
-	log.Infof(" * Release version: %s", config.ReleaseVersion)
+	log.Infof(" * Development branch: %s", config.Release.DevelopmentBranch)
+	log.Infof(" * Release branch: %s", config.Release.ReleaseBranch)
+	log.Infof(" * Release version: %s", config.Release.Version)
+	log.Infof(" * Changelog path: %s", config.Changelog.Path)
 	fmt.Println()
 
 	if !configs.IsCIMode {
@@ -366,50 +321,78 @@ func create(c *cli.Context) {
 
 	//
 	// Generate changelog and release
-	startCommitHash, endCommitHash, err := getCommitHashes(config.StartState, config.EndState)
+	startCommit, err := git.FirstCommit()
 	if err != nil {
-		log.Fatalf("Failed to get commit hashes, error: %s", err)
+		log.Fatalf("Failed to get first commit, error: %#v", err)
+	}
+
+	endCommit, err := git.LatestCommit()
+	if err != nil {
+		log.Fatalf("Failed to get latest commit, error: %#v", err)
+	}
+
+	taggedCommits, err := git.ListTaggedCommits()
+	if err != nil {
+		log.Fatalf("Failed to get tagged commits, error: %#v", err)
+	}
+
+	startDate := startCommit.Date
+	endDate := endCommit.Date
+	relevantTags := taggedCommits
+
+	if config.Changelog.Path != "" {
+		if exist, err := pathutil.IsPathExists(config.Changelog.Path); err != nil {
+			log.Fatalf("Failed to check if path exist, error: %#v", err)
+		} else if exist {
+			if len(taggedCommits) > 0 {
+				lastTaggedCommit := taggedCommits[len(taggedCommits)-1]
+				startDate = lastTaggedCommit.Date
+				relevantTags = []git.CommitModel{lastTaggedCommit}
+			}
+		}
 	}
 
 	fmt.Println()
-	log.Infof("start commit hash: %s", startCommitHash)
-	log.Infof("end commit hash: %s", endCommitHash)
+	log.Infof("Collect commits between (%s - %s)", startDate, endDate)
 
 	fmt.Println()
 	log.Infof("=> Generating changelog...")
-	commits, err := git.CommitMessages(startCommitHash, endCommitHash)
-	if err := writeChnagelog(config.ChangelogPath, config.StartState, config.EndState, commits); err != nil {
+	commits, err := git.GetCommitsBetween(startDate, endDate)
+	if err != nil {
+		log.Fatalf("Failed to get commits, error: %#v", err)
+	}
+	if err := writeChnagelog(config.Changelog.Path, commits, relevantTags, config.Release.Version); err != nil {
 		log.Fatalf("Failed to write changelog, error: %#v", err)
 	}
 
 	fmt.Println()
 	log.Infof("=> Adding changes to git...")
-	if err := git.Add([]string{config.ChangelogPath}); err != nil {
+	if err := git.Add([]string{config.Changelog.Path}); err != nil {
 		log.Fatalf("Failed to git add, error: %s", err)
 	}
 
-	if err := git.Commit(fmt.Sprintf("v%s", config.ReleaseVersion)); err != nil {
+	if err := git.Commit(fmt.Sprintf("v%s", config.Release.Version)); err != nil {
 		log.Fatalf("Failed to git commit, error: %s", err)
 	}
 
 	fmt.Println()
 	log.Infof("=> Merging changes into release branch...")
-	if err := git.CheckoutBranch(config.ReleaseBranch); err != nil {
+	if err := git.CheckoutBranch(config.Release.ReleaseBranch); err != nil {
 		log.Fatalf("Failed to git checkout, error: %s", err)
 	}
 
-	mergeCommitMessage := fmt.Sprintf("Merge %s into %s, release: v%s", config.DevelopmentBranch, config.ReleaseBranch, config.ReleaseVersion)
-	if err := git.Merge(config.DevelopmentBranch, mergeCommitMessage); err != nil {
+	mergeCommitMessage := fmt.Sprintf("Merge %s into %s, release: v%s", config.Release.DevelopmentBranch, config.Release.ReleaseBranch, config.Release.Version)
+	if err := git.Merge(config.Release.DevelopmentBranch, mergeCommitMessage); err != nil {
 		log.Fatalf("Failed to git merge, error: %s", err)
 	}
 
 	fmt.Println()
 	log.Infof("=> Tagging release branch...")
-	if err := git.Tag(config.ReleaseVersion); err != nil {
+	if err := git.Tag(config.Release.Version); err != nil {
 		log.Fatalf("Failed to git tag, error: %s", err)
 	}
 
-	if err := git.CheckoutBranch(config.DevelopmentBranch); err != nil {
+	if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
 		log.Fatalf("Failed to git checkout, error: %s", err)
 	}
 

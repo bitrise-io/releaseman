@@ -1,0 +1,7 @@
+config:
+  release:
+    development_branch: master
+    release_branch: master
+    version: "1.1.0"
+  changelog:
+    path: "./changelog"
