@@ -1,8 +1,6 @@
 package releaseman
 
 import (
-	"fmt"
-
 	"github.com/bitrise-io/go-utils/fileutil"
 	"gopkg.in/yaml.v2"
 )
@@ -26,9 +24,9 @@ const ReleaseConfigTemplate = `config:
     development_branch: {{.Release.DevelopmentBranch}}
     release_branch: {{.Release.ReleaseBranch}}
     version: {{.Release.Version}}
-{{if .Changelog.Path}}  changelog:
+  changelog:
     path: {{.Changelog.Path}}
-{{end}}`
+    template_path: {{.Changelog.TemplatePath}}`
 
 var (
 	// IsCIMode ...
@@ -79,12 +77,10 @@ func NewConfigFromBytes(bytes []byte) (Config, error) {
 		return Config{}, err
 	}
 
-	if fileConfig.Release == nil {
-		return Config{}, fmt.Errorf("Invalid configuration: no release configuration defined")
-	}
-
 	config := Config{}
-	config.Release = *fileConfig.Release
+	if fileConfig.Release != nil {
+		config.Release = *fileConfig.Release
+	}
 	if fileConfig.Changelog != nil {
 		config.Changelog = *fileConfig.Changelog
 	}

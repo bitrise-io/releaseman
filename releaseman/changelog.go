@@ -20,7 +20,7 @@ const ChangelogTemplate = `# Current version: {{.Version}}
 ===
 # Change log
 ===
-{{range .Sections}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date}})
+{{range .Sections}}### {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 ---
 {{range $idx, $commit := .Commits}} * {{$commit.Message}}{{ "\n" }}{{end}}
 {{end}}`
