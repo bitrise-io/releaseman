@@ -1,7 +1,6 @@
-config:
-  release:
-    development_branch: develop
-    release_branch: master
-    version: "0.0.1"
-  changelog:
-    path: "./changelog"
+release:
+  development_branch: develop
+  release_branch: master
+changelog:
+  path: "./_changelog/changelog.md"
+  template_path: "./_changelog/changelog_template"

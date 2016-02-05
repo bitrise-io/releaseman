@@ -1,0 +1,8 @@
+# Current version: {{.Version}}
+===
+# Change log
+===
+{{range .Sections}}### {{.HeaderFrom}} - {{.HeaderTo}}
+---
+{{range $idx, $change := .Changes}} * {{$change}}{{ "\n" }}{{end}}
+{{end}}
