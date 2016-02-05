@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"releaseman/git"
 	"strings"
 	"text/template"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
 )
@@ -105,10 +105,31 @@ func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.C
 		if releaseman.IsCIMode {
 			log.Fatalln("Missing required input: release version")
 		} else {
-			config.Release.Version, err = askForReleaseVersion()
+			tags, err := git.TaggedCommits()
+			if err != nil {
+				log.Fatalf("Failed to list tagged commits, error: %#v", err)
+			}
+
+			if len(tags) > 0 {
+				fmt.Println()
+				log.Infof("Your previous tags:")
+				for _, taggedCommit := range tags {
+					fmt.Printf("* %s\n", taggedCommit.Tag)
+				}
+			}
+
+			version, err := askForReleaseVersion()
 			if err != nil {
 				log.Fatalf("Failed to ask for release version, error: %s", err)
 			}
+
+			for _, taggedCommit := range tags {
+				if taggedCommit.Tag == version {
+					log.Fatalf("Tag (%s) already exist", version)
+				}
+			}
+
+			config.Release.Version = version
 		}
 	}
 
