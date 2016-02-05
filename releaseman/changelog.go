@@ -7,6 +7,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-tools/releaseman/git"
 )
 
@@ -42,15 +43,7 @@ type ChangelogModel struct {
 // Utility
 //=======================================
 
-func changeList(commits []git.CommitModel) []string {
-	changes := []string{}
-	for _, commit := range commits {
-		changes = append(changes, commit.Message)
-	}
-	return changes
-}
-
-func reverse(commits []git.CommitModel) []git.CommitModel {
+func reverseCommits(commits []git.CommitModel) []git.CommitModel {
 	reversed := []git.CommitModel{}
 	for i := len(commits) - 1; i >= 0; i-- {
 		reversed = append(reversed, commits[i])
@@ -76,22 +69,41 @@ func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.Comm
 		}
 	}
 
-	return reverse(relevantCommits)
+	return reverseCommits(relevantCommits)
 }
 
-func generateChangelog(commits, taggedCommits []git.CommitModel, nextVersion string) ChangelogModel {
-	changelog := ChangelogModel{Sections: []ChangelogSectionModel{}}
+func changeList(commits []git.CommitModel) []string {
+	changes := []string{}
+	for _, commit := range commits {
+		changes = append(changes, commit.Message)
+	}
+	return changes
+}
+
+func reverseSections(sections []ChangelogSectionModel) []ChangelogSectionModel {
+	reversed := []ChangelogSectionModel{}
+	for i := len(sections) - 1; i >= 0; i-- {
+		reversed = append(reversed, sections[i])
+	}
+	return reversed
+}
+
+func generateChangelog(commits, taggedCommits []git.CommitModel, version string) ChangelogModel {
+	changelog := ChangelogModel{
+		Version:  version,
+		Sections: []ChangelogSectionModel{},
+	}
 
 	if len(taggedCommits) > 0 {
 		// Commits between initial commit and first tag
-		relevantCommits := commitsBetween(nil, &(taggedCommits[0].Date), commits)
-
-		section := ChangelogSectionModel{
-			HeaderFrom: "",
-			HeaderTo:   taggedCommits[0].Tag,
-			Changes:    changeList(relevantCommits),
-		}
-		changelog.Sections = append(changelog.Sections, section)
+		// relevantCommits := commitsBetween(nil, &(taggedCommits[0].Date), commits)
+		//
+		// section := ChangelogSectionModel{
+		// 	HeaderFrom: "",
+		// 	HeaderTo:   taggedCommits[0].Tag,
+		// 	Changes:    changeList(relevantCommits),
+		// }
+		// changelog.Sections = append(changelog.Sections, section)
 
 		if len(taggedCommits) > 1 {
 			// Commits between tags
@@ -99,9 +111,9 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, nextVersion str
 				startTaggedCommit := taggedCommits[i]
 				endTaggedCommit := taggedCommits[i+1]
 
-				relevantCommits = commitsBetween(&(startTaggedCommit.Date), &(endTaggedCommit.Date), commits)
+				relevantCommits := commitsBetween(&(startTaggedCommit.Date), &(endTaggedCommit.Date), commits)
 
-				section = ChangelogSectionModel{
+				section := ChangelogSectionModel{
 					HeaderFrom: startTaggedCommit.Tag,
 					HeaderTo:   endTaggedCommit.Tag,
 					Changes:    changeList(relevantCommits),
@@ -111,11 +123,11 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, nextVersion str
 		}
 
 		// Commits between last tag and current state
-		relevantCommits = commitsBetween(&(taggedCommits[len(taggedCommits)-1].Date), nil, commits)
+		relevantCommits := commitsBetween(&(taggedCommits[len(taggedCommits)-1].Date), nil, commits)
 
-		section = ChangelogSectionModel{
+		section := ChangelogSectionModel{
 			HeaderFrom: taggedCommits[len(taggedCommits)-1].Tag,
-			HeaderTo:   "",
+			HeaderTo:   version,
 			Changes:    changeList(relevantCommits),
 		}
 		changelog.Sections = append(changelog.Sections, section)
@@ -124,30 +136,39 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, nextVersion str
 
 		section := ChangelogSectionModel{
 			HeaderFrom: "",
-			HeaderTo:   "",
+			HeaderTo:   version,
 			Changes:    changeList(relevantCommits),
 		}
 		changelog.Sections = append(changelog.Sections, section)
 	}
 
+	changelog.Sections = reverseSections(changelog.Sections)
+
 	return changelog
 }
 
 // WriteChnagelog ...
-func WriteChnagelog(changelogPath string, commits, taggedCommits []git.CommitModel, nextVersion string) error {
-	changelog := generateChangelog(commits, taggedCommits, nextVersion)
-	changelog.Version = nextVersion
-
+func WriteChnagelog(commits, taggedCommits []git.CommitModel, config Config) error {
+	changelog := generateChangelog(commits, taggedCommits, config.Release.Version)
 	log.Debugf("Changelog: %#v", changelog)
 
-	tmpl, err := template.New("changelog").Parse(ChangelogTemplate)
+	changelogTemplate := ChangelogTemplate
+	if config.Changelog.TemplatePath != "" {
+		var err error
+		changelogTemplate, err = fileutil.ReadStringFromFile(config.Changelog.TemplatePath)
+		if err != nil {
+			log.Fatalf("Failed to read changelog template, error: %#v", err)
+		}
+	}
+
+	tmpl, err := template.New("changelog").Parse(changelogTemplate)
 	if err != nil {
 		log.Fatalf("Failed to parse template, error: %#v", err)
 	}
 
-	file, err := os.Create(changelogPath)
+	file, err := os.Create(config.Changelog.Path)
 	if err != nil {
-		log.Fatalf("Failed to create changelog at (%s), error: %#v", changelogPath, err)
+		log.Fatalf("Failed to create changelog at (%s), error: %#v", config.Changelog.Path, err)
 	}
 	fileWriter := bufio.NewWriter(file)
 

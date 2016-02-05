@@ -167,7 +167,7 @@ func create(c *cli.Context) {
 	if err != nil {
 		log.Fatalf("Failed to get commits, error: %#v", err)
 	}
-	if err := releaseman.WriteChnagelog(config.Changelog.Path, commits, relevantTags, config.Release.Version); err != nil {
+	if err := releaseman.WriteChnagelog(commits, relevantTags, config); err != nil {
 		log.Fatalf("Failed to write changelog, error: %#v", err)
 	}
 

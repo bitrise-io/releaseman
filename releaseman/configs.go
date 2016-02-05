@@ -48,7 +48,8 @@ type Release struct {
 
 // Changelog ...
 type Changelog struct {
-	Path string `yaml:"path"`
+	Path         string `yaml:"path"`
+	TemplatePath string `yaml:"template_path"`
 }
 
 // Config ...
