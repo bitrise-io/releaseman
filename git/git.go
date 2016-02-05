@@ -35,8 +35,8 @@ func parseDate(unixTimeStampStr string) (time.Time, error) {
 }
 
 func parseCommit(commitLineStr string) (CommitModel, error) {
-	// ba58d366e3565a0f52250dce992fe29c29750f79 1454582002 go tests added
-	re := regexp.MustCompile(`(?P<hash>[0-9a-z]+) (?P<date>[0-9]+) (?P<author>.*) (?P<message>.+)`)
+	// 85d8658733f73ae6d5407e8e4c2b81a5f2ed016c 1454498673 (Krisztián Gödrei) first change
+	re := regexp.MustCompile(`(?P<hash>[0-9a-z]+) (?P<date>[0-9]+) \((?P<author>.*)\) (?P<message>.+)`)
 	results := re.FindAllStringSubmatch(commitLineStr, -1)
 
 	for _, v := range results {
@@ -80,7 +80,7 @@ func TaggedCommits() ([]CommitModel, error) {
 	taggedCommits := []CommitModel{}
 	tags := splitByNewLineAndStrip(out)
 	for _, tag := range tags {
-		out, err = NewPrintableCommand("git", "rev-list", "-n", "1", `--pretty=format:%H %ct %an %s`, tag).Run()
+		out, err = NewPrintableCommand("git", "rev-list", "-n", "1", `--pretty=format:%H %ct (%an) %s`, tag).Run()
 		if err != nil {
 			return []CommitModel{}, err
 		}
@@ -124,7 +124,7 @@ func CheckoutBranch(branch string) error {
 
 // FirstCommit ...
 func FirstCommit() (CommitModel, error) {
-	out, err := NewPrintableCommand("git", "rev-list", "--max-parents=0", `--pretty=format:%H %ct %an %s`, "HEAD").Run()
+	out, err := NewPrintableCommand("git", "rev-list", "--max-parents=0", `--pretty=format:%H %ct (%an) %s`, "HEAD").Run()
 	if err != nil {
 		return CommitModel{}, err
 	}
@@ -137,7 +137,7 @@ func FirstCommit() (CommitModel, error) {
 
 // LatestCommit ...
 func LatestCommit() (CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", "-1", `--pretty=format:%H %ct %an %s`).Run()
+	out, err := NewPrintableCommand("git", "log", "-1", `--pretty=format:%H %ct (%an) %s`).Run()
 	if err != nil {
 		return CommitModel{}, err
 	}
@@ -163,7 +163,7 @@ func CommitOfTag(tag string) (CommitModel, error) {
 
 // GetCommitsBetween ...
 func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", `--pretty=format:%H %ct %an %s`, "--reverse").Run()
+	out, err := NewPrintableCommand("git", "log", `--pretty=format:%H %ct (%an) %s`, "--reverse").Run()
 	if err != nil {
 		return []CommitModel{}, err
 	}

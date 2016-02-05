@@ -1,8 +1,8 @@
 # Current version: {{.Version}}
 ===
-# Change log
+# Changelog
 ===
-{{range .Sections}}### {{.HeaderFrom}} - {{.HeaderTo}}
+{{range .Sections}}### {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 ---
-{{range $idx, $change := .Changes}} * {{$change}}{{ "\n" }}{{end}}
+{{range $idx, $commit := .Commits}} * {{$commit.Message}} {{ "\n" }}{{end}}
 {{end}}

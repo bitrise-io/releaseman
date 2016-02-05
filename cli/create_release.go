@@ -135,6 +135,16 @@ func collectReleaseConfigParams(config releaseman.Config, c *cli.Context) (relea
 
 func createRelease(c *cli.Context) {
 	//
+	// Fail if git is not clean
+	if areChanges, err := git.AreUncommitedChanges(); err != nil {
+		log.Fatalf("Failed to get uncommited changes, error: %#v", err)
+	} else if areChanges {
+		log.Fatalf("There are uncommited changes in your git, please commit your changes before continue release!")
+	}
+
+	printRollBackMessage()
+
+	//
 	// Build config
 	config := releaseman.Config{}
 	configPath := ""
@@ -156,6 +166,31 @@ func createRelease(c *cli.Context) {
 	config, err := collectReleaseConfigParams(config, c)
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
+	}
+
+	//
+	// Checkout the development branch
+	currentBranch, err := git.CurrentBranchName()
+	if err != nil {
+		log.Fatalf("Failed to get current branch name, error: %#v", err)
+	}
+
+	if config.Release.DevelopmentBranch != currentBranch {
+		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
+
+		fmt.Println()
+		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch))
+		if err != nil {
+			log.Fatalf("Failed to ask for checkout, error: %#v", err)
+		}
+
+		if !checkout {
+			log.Fatalf("Current branch should be the development branch (%s)!", config.Release.DevelopmentBranch)
+		}
+
+		if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
+			log.Fatalf("Failed to checkout branch (%s), error: %#v", config.Release.DevelopmentBranch, err)
+		}
 	}
 
 	//

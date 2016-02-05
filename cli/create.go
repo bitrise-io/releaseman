@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -22,6 +21,9 @@ func printRollBackMessage() {
 	log.Infoln("How to roll-back?")
 	log.Infoln("* if you want to undo the last commit you can call:")
 	log.Infoln("    $ git reset --hard HEAD~1")
+	log.Infoln("* to delete tag:")
+	log.Infoln("    $ git tag -d [TAG]")
+	log.Infoln("    $ git push origin :refs/tags/[TAG]")
 	log.Infoln("* to roll back to the remote state:")
 	log.Infoln("    $ git reset --hard origin/[branch-name]")
 	fmt.Println()
@@ -76,31 +78,6 @@ func create(c *cli.Context) {
 	}
 
 	//
-	// Checkout the development branch
-	currentBranch, err := git.CurrentBranchName()
-	if err != nil {
-		log.Fatalf("Failed to get current branch name, error: %#v", err)
-	}
-
-	if config.Release.DevelopmentBranch != currentBranch {
-		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
-
-		fmt.Println()
-		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch))
-		if err != nil {
-			log.Fatalf("Failed to ask for checkout, error: %#v", err)
-		}
-
-		if !checkout {
-			log.Fatalf("Current branch should be the development branch (%s)!", config.Release.DevelopmentBranch)
-		}
-
-		if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
-			log.Fatalf("Failed to checkout branch (%s), error: %#v", config.Release.DevelopmentBranch, err)
-		}
-	}
-
-	//
 	// Print config
 	fmt.Println()
 	log.Infof("Your config:")
@@ -108,6 +85,9 @@ func create(c *cli.Context) {
 	log.Infof(" * Release branch: %s", config.Release.ReleaseBranch)
 	log.Infof(" * Release version: %s", config.Release.Version)
 	log.Infof(" * Changelog path: %s", config.Changelog.Path)
+	if config.Changelog.TemplatePath != "" {
+		log.Infof(" * Changelog template path: %s", config.Changelog.TemplatePath)
+	}
 	fmt.Println()
 
 	if !releaseman.IsCIMode {
@@ -165,8 +145,6 @@ func create(c *cli.Context) {
 	if err := releaseman.WriteChnagelog(commits, relevantTags, config); err != nil {
 		log.Fatalf("Failed to write changelog, error: %#v", err)
 	}
-
-	os.Exit(0)
 
 	fmt.Println()
 	log.Infof("=> Adding changes to git...")

@@ -26,7 +26,7 @@ func askForChangelogTemplatePath() (string, error) {
 	return goinp.AskForString("Type in changelog template path, or press enter to use default one!")
 }
 
-func collectChangeLogConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
+func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 	if c.IsSet(DevelopmentBranchKey) {
 		config.Release.DevelopmentBranch = c.String(DevelopmentBranchKey)
@@ -39,6 +39,31 @@ func collectChangeLogConfigParams(config releaseman.Config, c *cli.Context) (rel
 			if err != nil {
 				log.Fatalf("Failed to ask for development branch, error: %s", err)
 			}
+		}
+	}
+
+	//
+	// Checkout the development branch
+	currentBranch, err := git.CurrentBranchName()
+	if err != nil {
+		log.Fatalf("Failed to get current branch name, error: %#v", err)
+	}
+
+	if config.Release.DevelopmentBranch != currentBranch {
+		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
+
+		fmt.Println()
+		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch))
+		if err != nil {
+			log.Fatalf("Failed to ask for checkout, error: %#v", err)
+		}
+
+		if !checkout {
+			log.Fatalf("Current branch should be the development branch (%s)!", config.Release.DevelopmentBranch)
+		}
+
+		if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
+			log.Fatalf("Failed to checkout branch (%s), error: %#v", config.Release.DevelopmentBranch, err)
 		}
 	}
 
@@ -112,7 +137,7 @@ func collectChangeLogConfigParams(config releaseman.Config, c *cli.Context) (rel
 // Main
 //=======================================
 
-func createChangeLog(c *cli.Context) {
+func createChangelog(c *cli.Context) {
 	//
 	// Build config
 	config := releaseman.Config{}
@@ -132,7 +157,7 @@ func createChangeLog(c *cli.Context) {
 		}
 	}
 
-	config, err := collectChangeLogConfigParams(config, c)
+	config, err := collectChangelogConfigParams(config, c)
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
@@ -143,24 +168,24 @@ func createChangeLog(c *cli.Context) {
 	log.Infof("Your config:")
 	log.Infof(" * Development branch: %s", config.Release.DevelopmentBranch)
 	log.Infof(" * Release version: %s", config.Release.Version)
-	log.Infof(" * Change log path: %s", config.Changelog.Path)
+	log.Infof(" * Changelog path: %s", config.Changelog.Path)
 	if config.Changelog.TemplatePath != "" {
-		log.Infof(" * Change log template path: %s", config.Changelog.TemplatePath)
+		log.Infof(" * Changelog template path: %s", config.Changelog.TemplatePath)
 	}
 	fmt.Println()
 
 	if !releaseman.IsCIMode {
-		ok, err := goinp.AskForBool("Are you ready for creating changelog?")
+		ok, err := goinp.AskForBool("Are you ready for creating Changelog?")
 		if err != nil {
 			log.Fatalf("Failed to ask for input, error: %s", err)
 		}
 		if !ok {
-			log.Fatal("Aborted create changelog")
+			log.Fatal("Aborted create Changelog")
 		}
 	}
 
 	//
-	// Generate changelog
+	// Generate Changelog
 	startCommit, err := git.FirstCommit()
 	if err != nil {
 		log.Fatalf("Failed to get first commit, error: %#v", err)
@@ -196,15 +221,15 @@ func createChangeLog(c *cli.Context) {
 	log.Infof("Collect commits between (%s - %s)", startDate, endDate)
 
 	fmt.Println()
-	log.Infof("=> Generating changelog...")
+	log.Infof("=> Generating Changelog...")
 	commits, err := git.GetCommitsBetween(startDate, endDate)
 	if err != nil {
 		log.Fatalf("Failed to get commits, error: %#v", err)
 	}
 	if err := releaseman.WriteChnagelog(commits, relevantTags, config); err != nil {
-		log.Fatalf("Failed to write changelog, error: %#v", err)
+		log.Fatalf("Failed to write Changelog, error: %#v", err)
 	}
 
 	fmt.Println()
-	log.Infoln(colorstring.Greenf("v%s changelog created (%s) 🚀", config.Release.Version, config.Changelog.Path))
+	log.Infoln(colorstring.Greenf("v%s Changelog created (%s) 🚀", config.Release.Version, config.Changelog.Path))
 }

@@ -73,7 +73,30 @@ var (
 		{
 			Name:   "create-changelog",
 			Usage:  "Creates changelog",
-			Action: createChangeLog,
+			Action: createChangelog,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  DevelopmentBranchKey,
+					Usage: "Development branch",
+				},
+				cli.StringFlag{
+					Name:  VersionKey,
+					Usage: "Release version",
+				},
+				cli.StringFlag{
+					Name:  ChangelogPathKey,
+					Usage: "changelog path",
+				},
+				cli.StringFlag{
+					Name:  ChangelogTemplatePathKey,
+					Usage: "changelog template path",
+				},
+			},
+		},
+		{
+			Name:   "create-release",
+			Usage:  "Creates release",
+			Action: createRelease,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  DevelopmentBranchKey,
@@ -90,33 +113,9 @@ var (
 			},
 		},
 		{
-			Name:   "create-release",
-			Usage:  "Creates release",
-			Action: createRelease,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  DevelopmentBranchKey,
-					Usage: "Development branch",
-				},
-				cli.StringFlag{
-					Name:  VersionKey,
-					Usage: "Release version",
-				},
-				cli.StringFlag{
-					Name:  ChangelogPathKey,
-					Usage: "Change log path",
-				},
-				cli.StringFlag{
-					Name:  ChangelogTemplatePathKey,
-					Usage: "Change log template path",
-				},
-			},
-		},
-		{
 			Name:   "init",
 			Usage:  "Initialize release_config.yml",
 			Action: initRelease,
-			Flags:  []cli.Flag{},
 		},
 	}
 

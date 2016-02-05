@@ -36,7 +36,7 @@ func Run() {
 
 	app := cli.NewApp()
 	app.Name = path.Base(os.Args[0])
-	app.Usage = "Helps for releasing"
+	app.Usage = "Helps for generating changelog and releasing"
 	app.Version = "0.0.1"
 
 	app.Author = ""
