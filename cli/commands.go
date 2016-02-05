@@ -74,6 +74,12 @@ var (
 				},
 			},
 		},
+		{
+			Name:   "init",
+			Usage:  "Initialize release_config.yml",
+			Action: initRelease,
+			Flags:  []cli.Flag{},
+		},
 	}
 
 	appFlags = []cli.Flag{

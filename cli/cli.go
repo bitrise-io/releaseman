@@ -6,7 +6,7 @@ import (
 	"path"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-tools/releaseman/configs"
+	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
 )
 
@@ -20,7 +20,7 @@ func before(c *cli.Context) error {
 
 	// CI Mode check
 	if c.Bool(CIKey) {
-		configs.IsCIMode = true
+		releaseman.IsCIMode = true
 	}
 
 	return nil

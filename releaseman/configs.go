@@ -1,4 +1,4 @@
-package configs
+package releaseman
 
 import (
 	"fmt"
@@ -6,6 +6,10 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"gopkg.in/yaml.v2"
 )
+
+//=======================================
+// Consts
+//=======================================
 
 const (
 	// DefaultConfigPth ...
@@ -15,6 +19,16 @@ const (
 	// CurrentStateStr ...
 	CurrentStateStr = "current state"
 )
+
+// ReleaseConfigTemplate ...
+const ReleaseConfigTemplate = `config:
+  release:
+    development_branch: {{.Release.DevelopmentBranch}}
+    release_branch: {{.Release.ReleaseBranch}}
+    version: {{.Release.Version}}
+{{if .Changelog.Path}}  changelog:
+    path: {{.Changelog.Path}}
+{{end}}`
 
 var (
 	// IsCIMode ...
