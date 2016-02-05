@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -24,12 +25,6 @@ func printRollBackMessage() {
 	log.Infoln("* to roll back to the remote state:")
 	log.Infoln("    $ git reset --hard origin/[branch-name]")
 	fmt.Println()
-}
-
-func printDoneMessage(config releaseman.Config) {
-	fmt.Println()
-	log.Infoln(colorstring.Greenf("v%s released 🚀", config.Release.Version))
-	log.Infoln("Take a look at your git, and if you are happy with the release, push the changes.")
 }
 
 func firstCommitAfterTag(taggedCommit git.CommitModel, commits []git.CommitModel) (git.CommitModel, bool) {
@@ -57,7 +52,7 @@ func create(c *cli.Context) {
 	printRollBackMessage()
 
 	//
-	// Build config from file
+	// Build config
 	config := releaseman.Config{}
 	configPath := ""
 	if c.IsSet("config") {
@@ -137,7 +132,7 @@ func create(c *cli.Context) {
 		log.Fatalf("Failed to get latest commit, error: %#v", err)
 	}
 
-	taggedCommits, err := git.ListTaggedCommits()
+	taggedCommits, err := git.TaggedCommits()
 	if err != nil {
 		log.Fatalf("Failed to get tagged commits, error: %#v", err)
 	}
@@ -171,6 +166,8 @@ func create(c *cli.Context) {
 		log.Fatalf("Failed to write changelog, error: %#v", err)
 	}
 
+	os.Exit(0)
+
 	fmt.Println()
 	log.Infof("=> Adding changes to git...")
 	if err := git.Add([]string{config.Changelog.Path}); err != nil {
@@ -202,5 +199,7 @@ func create(c *cli.Context) {
 		log.Fatalf("Failed to git checkout, error: %s", err)
 	}
 
-	printDoneMessage(config)
+	fmt.Println()
+	log.Infoln(colorstring.Greenf("v%s released 🚀", config.Release.Version))
+	log.Infoln("Take a look at your git, and if you are happy with the release, push the changes.")
 }

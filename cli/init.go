@@ -4,13 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 	"text/template"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
 )
@@ -19,135 +17,14 @@ import (
 // Utility
 //=======================================
 
-func askForDevelopmentBranch() (string, error) {
-	branches, err := git.LocalBranches()
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println()
-	developmentBranch, err := goinp.SelectFromStrings("Select your development branch!", branches)
-	if err != nil {
-		return "", err
-	}
-
-	// 'git branch --list' marks the current branch with (* )
-	if strings.HasPrefix(developmentBranch, "* ") {
-		developmentBranch = strings.TrimPrefix(developmentBranch, "* ")
-	}
-	return developmentBranch, nil
-}
-
-func askForReleaseBranch() (string, error) {
-	branches, err := git.LocalBranches()
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println()
-	releaseBranch, err := goinp.SelectFromStrings("Select your release branch!", branches)
-	if err != nil {
-		return "", err
-	}
-
-	// 'git branch --list' marks the current branch with (* )
-	if strings.HasPrefix(releaseBranch, "* ") {
-		releaseBranch = strings.TrimPrefix(releaseBranch, "* ")
-	}
-
-	return releaseBranch, nil
-}
-
-func askForReleaseVersion() (string, error) {
-	fmt.Println()
-	return goinp.AskForString("Type in release version!")
-}
-
-func askForChangelogPath() (string, error) {
-	fmt.Println()
-	return goinp.AskForString("Type in changelog path!")
-}
-
 func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
-	if c.IsSet(DevelopmentBranchKey) {
-		config.Release.DevelopmentBranch = c.String(DevelopmentBranchKey)
-	}
-	if config.Release.DevelopmentBranch == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: development branch")
-		} else {
-			config.Release.DevelopmentBranch, err = askForDevelopmentBranch()
-			if err != nil {
-				log.Fatalf("Failed to ask for development branch, error: %s", err)
-			}
-		}
+	config, err = collectChangeLogConfigParams(config, c)
+	if err != nil {
+		return releaseman.Config{}, err
 	}
 
-	if c.IsSet(ReleaseBranchKey) {
-		config.Release.ReleaseBranch = c.String(ReleaseBranchKey)
-	}
-	if config.Release.ReleaseBranch == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: release branch")
-		} else {
-			config.Release.ReleaseBranch, err = askForReleaseBranch()
-			if err != nil {
-				log.Fatalf("Failed to ask for release branch, error: %s", err)
-			}
-		}
-	}
-
-	if c.IsSet(ReleaseVersionKey) {
-		config.Release.Version = c.String(ReleaseVersionKey)
-	}
-	if config.Release.Version == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: release version")
-		} else {
-			tags, err := git.TaggedCommits()
-			if err != nil {
-				log.Fatalf("Failed to list tagged commits, error: %#v", err)
-			}
-
-			if len(tags) > 0 {
-				fmt.Println()
-				log.Infof("Your previous tags:")
-				for _, taggedCommit := range tags {
-					fmt.Printf("* %s\n", taggedCommit.Tag)
-				}
-			}
-
-			version, err := askForReleaseVersion()
-			if err != nil {
-				log.Fatalf("Failed to ask for release version, error: %s", err)
-			}
-
-			for _, taggedCommit := range tags {
-				if taggedCommit.Tag == version {
-					log.Fatalf("Tag (%s) already exist", version)
-				}
-			}
-
-			config.Release.Version = version
-		}
-	}
-
-	if c.IsSet(ChangelogPathKey) {
-		config.Changelog.Path = c.String(ChangelogPathKey)
-	}
-	if config.Changelog.Path == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: changelog path")
-		} else {
-			config.Changelog.Path, err = askForChangelogPath()
-			if err != nil {
-				log.Fatalf("Failed to ask for changelog path, error: %s", err)
-			}
-		}
-	}
-
-	return config, nil
+	return collectReleaseConfigParams(config, c)
 }
 
 //=======================================
