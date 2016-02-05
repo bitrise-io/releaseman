@@ -16,6 +16,7 @@ type CommitModel struct {
 	Hash    string
 	Message string
 	Date    time.Time
+	Author  string
 	Tag     string
 }
 
@@ -35,26 +36,24 @@ func parseDate(unixTimeStampStr string) (time.Time, error) {
 
 func parseCommit(commitLineStr string) (CommitModel, error) {
 	// ba58d366e3565a0f52250dce992fe29c29750f79 1454582002 go tests added
-	re := regexp.MustCompile(`(?P<hash>[0-9a-z]+) (?P<date>[0-9]+) (?P<message>.+)`)
+	re := regexp.MustCompile(`(?P<hash>[0-9a-z]+) (?P<date>[0-9]+) (?P<author>.*) (?P<message>.+)`)
 	results := re.FindAllStringSubmatch(commitLineStr, -1)
 
 	for _, v := range results {
-		commitHash := v[1]
-		commitDate, err := parseDate(v[2])
+		hash := v[1]
+		date, err := parseDate(v[2])
 		if err != nil {
 			return CommitModel{}, err
 		}
-		commitMessage := v[3]
+		author := v[3]
+		message := v[4]
 
-		if commitHash != "" && commitMessage != "" {
-			commit := CommitModel{
-				Hash:    commitHash,
-				Message: commitMessage,
-				Date:    commitDate,
-			}
-
-			return commit, nil
-		}
+		return CommitModel{
+			Hash:    hash,
+			Message: message,
+			Date:    date,
+			Author:  author,
+		}, nil
 	}
 	return CommitModel{}, fmt.Errorf("Failed to parse commit: %s", commitLineStr)
 }
@@ -72,8 +71,8 @@ func LocalBranches() ([]string, error) {
 	return splitByNewLineAndStrip(out), nil
 }
 
-// ListTaggedCommits ...
-func ListTaggedCommits() ([]CommitModel, error) {
+// TaggedCommits ...
+func TaggedCommits() ([]CommitModel, error) {
 	out, err := NewPrintableCommand("git", "tag", "--list").Run()
 	if err != nil {
 		return []CommitModel{}, err
@@ -81,7 +80,7 @@ func ListTaggedCommits() ([]CommitModel, error) {
 	taggedCommits := []CommitModel{}
 	tags := splitByNewLineAndStrip(out)
 	for _, tag := range tags {
-		out, err = NewPrintableCommand("git", "rev-list", "-n", "1", `--pretty=format:%H %ct %s`, tag).Run()
+		out, err = NewPrintableCommand("git", "rev-list", "-n", "1", `--pretty=format:%H %ct %an %s`, tag).Run()
 		if err != nil {
 			return []CommitModel{}, err
 		}
@@ -125,7 +124,7 @@ func CheckoutBranch(branch string) error {
 
 // FirstCommit ...
 func FirstCommit() (CommitModel, error) {
-	out, err := NewPrintableCommand("git", "rev-list", "--max-parents=0", `--pretty=format:%H %ct %s`, "HEAD").Run()
+	out, err := NewPrintableCommand("git", "rev-list", "--max-parents=0", `--pretty=format:%H %ct %an %s`, "HEAD").Run()
 	if err != nil {
 		return CommitModel{}, err
 	}
@@ -138,7 +137,7 @@ func FirstCommit() (CommitModel, error) {
 
 // LatestCommit ...
 func LatestCommit() (CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", "-1", `--pretty=format:%H %ct %s`).Run()
+	out, err := NewPrintableCommand("git", "log", "-1", `--pretty=format:%H %ct %an %s`).Run()
 	if err != nil {
 		return CommitModel{}, err
 	}
@@ -164,7 +163,7 @@ func CommitOfTag(tag string) (CommitModel, error) {
 
 // GetCommitsBetween ...
 func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", `--pretty=format:%H %ct %s`, "--reverse").Run()
+	out, err := NewPrintableCommand("git", "log", `--pretty=format:%H %ct %an %s`, "--reverse").Run()
 	if err != nil {
 		return []CommitModel{}, err
 	}

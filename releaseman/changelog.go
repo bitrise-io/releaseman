@@ -17,9 +17,12 @@ import (
 
 // ChangelogTemplate ...
 const ChangelogTemplate = `# Current version: {{.Version}}
-# Changelog
-{{range .Sections}}### {{.HeaderFrom}} - {{.HeaderTo}}
-{{range $idx, $change := .Changes}} * {{$change}}{{ "\n" }}{{end}}
+===
+# Change log
+===
+{{range .Sections}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date}})
+---
+{{range $idx, $commit := .Commits}} * {{$commit.Message}}{{ "\n" }}{{end}}
 {{end}}`
 
 //=======================================
@@ -28,9 +31,9 @@ const ChangelogTemplate = `# Current version: {{.Version}}
 
 // ChangelogSectionModel ...
 type ChangelogSectionModel struct {
-	HeaderFrom string
-	HeaderTo   string
-	Changes    []string
+	StartTaggedCommit git.CommitModel
+	EndTaggedCommit   git.CommitModel
+	Commits           []git.CommitModel
 }
 
 // ChangelogModel ...
@@ -60,7 +63,7 @@ func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.Comm
 			isRelevantCommit = true
 		}
 
-		if isRelevantCommit && (endDate == nil || (*endDate).Sub(commit.Date) <= 0) {
+		if isRelevantCommit && endDate != nil && (*endDate).Sub(commit.Date) <= 0 {
 			return relevantCommits
 		}
 
@@ -69,7 +72,7 @@ func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.Comm
 		}
 	}
 
-	return reverseCommits(relevantCommits)
+	return relevantCommits
 }
 
 func changeList(commits []git.CommitModel) []string {
@@ -95,16 +98,6 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 	}
 
 	if len(taggedCommits) > 0 {
-		// Commits between initial commit and first tag
-		// relevantCommits := commitsBetween(nil, &(taggedCommits[0].Date), commits)
-		//
-		// section := ChangelogSectionModel{
-		// 	HeaderFrom: "",
-		// 	HeaderTo:   taggedCommits[0].Tag,
-		// 	Changes:    changeList(relevantCommits),
-		// }
-		// changelog.Sections = append(changelog.Sections, section)
-
 		if len(taggedCommits) > 1 {
 			// Commits between tags
 			for i := 0; i < len(taggedCommits)-1; i++ {
@@ -114,9 +107,9 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 				relevantCommits := commitsBetween(&(startTaggedCommit.Date), &(endTaggedCommit.Date), commits)
 
 				section := ChangelogSectionModel{
-					HeaderFrom: startTaggedCommit.Tag,
-					HeaderTo:   endTaggedCommit.Tag,
-					Changes:    changeList(relevantCommits),
+					StartTaggedCommit: startTaggedCommit,
+					EndTaggedCommit:   endTaggedCommit,
+					Commits:           relevantCommits,
 				}
 				changelog.Sections = append(changelog.Sections, section)
 			}
@@ -126,18 +119,24 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 		relevantCommits := commitsBetween(&(taggedCommits[len(taggedCommits)-1].Date), nil, commits)
 
 		section := ChangelogSectionModel{
-			HeaderFrom: taggedCommits[len(taggedCommits)-1].Tag,
-			HeaderTo:   version,
-			Changes:    changeList(relevantCommits),
+			StartTaggedCommit: taggedCommits[len(taggedCommits)-1],
+			EndTaggedCommit: git.CommitModel{
+				Tag:  version,
+				Date: time.Now(),
+			},
+			Commits: relevantCommits,
 		}
 		changelog.Sections = append(changelog.Sections, section)
 	} else {
 		relevantCommits := commitsBetween(nil, nil, commits)
 
 		section := ChangelogSectionModel{
-			HeaderFrom: "",
-			HeaderTo:   version,
-			Changes:    changeList(relevantCommits),
+			StartTaggedCommit: git.CommitModel{},
+			EndTaggedCommit: git.CommitModel{
+				Tag:  version,
+				Date: time.Now(),
+			},
+			Commits: relevantCommits,
 		}
 		changelog.Sections = append(changelog.Sections, section)
 	}

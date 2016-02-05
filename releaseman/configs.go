@@ -79,8 +79,6 @@ func NewConfigFromBytes(bytes []byte) (Config, error) {
 		return Config{}, err
 	}
 
-	fmt.Printf("%#v\n", fileConfig)
-
 	if fileConfig.Release == nil {
 		return Config{}, fmt.Errorf("Invalid configuration: no release configuration defined")
 	}
