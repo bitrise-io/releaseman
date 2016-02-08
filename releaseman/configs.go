@@ -1,6 +1,9 @@
 package releaseman
 
 import (
+	"fmt"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"gopkg.in/yaml.v2"
 )
@@ -19,14 +22,12 @@ const (
 )
 
 // ReleaseConfigTemplate ...
-const ReleaseConfigTemplate = `config:
-  release:
-    development_branch: {{.Release.DevelopmentBranch}}
-    release_branch: {{.Release.ReleaseBranch}}
-    version: {{.Release.Version}}
-  changelog:
-    path: {{.Changelog.Path}}
-    template_path: {{.Changelog.TemplatePath}}`
+const ReleaseConfigTemplate = `release:
+  development_branch: {{.Release.DevelopmentBranch}}
+  release_branch: {{.Release.ReleaseBranch}}
+changelog:
+  path: {{.Changelog.Path}}
+`
 
 var (
 	// IsCIMode ...
@@ -47,7 +48,7 @@ type Release struct {
 // Changelog ...
 type Changelog struct {
 	Path         string `yaml:"path"`
-	TemplatePath string `yaml:"template_path"`
+	ItemTemplate string `yaml:"item_template"`
 }
 
 // Config ...
@@ -86,4 +87,37 @@ func NewConfigFromBytes(bytes []byte) (Config, error) {
 	}
 
 	return config, nil
+}
+
+// PrintMode ...
+type PrintMode uint8
+
+const (
+	// FullMode ...
+	FullMode PrintMode = iota
+	// ChangelogMode ...
+	ChangelogMode
+	// ReleaseMode ...
+	ReleaseMode
+)
+
+// Print ...
+func (config Config) Print(mode PrintMode) {
+	fmt.Println()
+	log.Infof("Your configuration:")
+
+	if mode == ChangelogMode || mode == ReleaseMode || mode == FullMode {
+		log.Infof(" * Development branch: %s", config.Release.DevelopmentBranch)
+	}
+	if mode == ReleaseMode || mode == FullMode {
+		log.Infof(" * Release branch: %s", config.Release.ReleaseBranch)
+	}
+	if config.Release.Version != "" && (mode == ChangelogMode || mode == ReleaseMode || mode == FullMode) {
+		log.Infof(" * Release version: %s", config.Release.Version)
+	}
+	if mode == ChangelogMode || mode == FullMode {
+		log.Infof(" * Changelog path: %s", config.Changelog.Path)
+	}
+
+	fmt.Println()
 }

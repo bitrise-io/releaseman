@@ -1,6 +1,0 @@
-release:
-  development_branch: develop
-  release_branch: master
-changelog:
-  path: "./_changelog/changelog.md"
-  template_path: "./_changelog/changelog_template"

@@ -1,9 +1,8 @@
 package releaseman
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"text/template"
 	"time"
 
@@ -18,10 +17,7 @@ import (
 //=======================================
 
 // ChangelogTemplate ...
-const ChangelogTemplate = `# Current version: {{.Version}}
-===
-# Change log
-===
+const ChangelogTemplate = `
 {{range .Sections}}### {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 ---
 {{range $idx, $commit := .Commits}} * {{$commit.Message}}{{ "\n" }}{{end}}
@@ -149,39 +145,36 @@ func BumpedVersion(versionStr string, segmentIdx int) (string, error) {
 	return version.String(), nil
 }
 
-// WriteChnagelog ...
-func WriteChnagelog(commits, taggedCommits []git.CommitModel, config Config) error {
+// WriteChangelog ...
+func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, append bool) error {
 	changelog := generateChangelog(commits, taggedCommits, config.Release.Version)
 	log.Debugf("Changelog: %#v", changelog)
 
-	changelogTemplate := ChangelogTemplate
-	if config.Changelog.TemplatePath != "" {
-		var err error
-		changelogTemplate, err = fileutil.ReadStringFromFile(config.Changelog.TemplatePath)
-		if err != nil {
-			log.Fatalf("Failed to read changelog template, error: %#v", err)
-		}
+	changelogItemTemplateStr := ChangelogTemplate
+	if config.Changelog.ItemTemplate != "" {
+		changelogItemTemplateStr = config.Changelog.ItemTemplate
 	}
 
-	tmpl, err := template.New("changelog").Parse(changelogTemplate)
+	tmpl, err := template.New("changelog").Parse(changelogItemTemplateStr)
 	if err != nil {
 		log.Fatalf("Failed to parse template, error: %#v", err)
 	}
 
-	file, err := os.Create(config.Changelog.Path)
-	if err != nil {
-		log.Fatalf("Failed to create changelog at (%s), error: %#v", config.Changelog.Path, err)
-	}
-	fileWriter := bufio.NewWriter(file)
-
-	err = tmpl.Execute(fileWriter, changelog)
+	var changelogBytes bytes.Buffer
+	err = tmpl.Execute(&changelogBytes, changelog)
 	if err != nil {
 		log.Fatalf("Failed to execute template, error: %#v", err)
 	}
+	changelogStr := changelogBytes.String()
 
-	if err = fileWriter.Flush(); err != nil {
-		log.Fatalf("Failed to flush changelog file, error: %#v", err)
+	if append {
+		previosChangelogStr, err := fileutil.ReadStringFromFile(config.Changelog.Path)
+		if err != nil {
+			return err
+		}
+
+		changelogStr = changelogStr + previosChangelogStr
 	}
 
-	return nil
+	return fileutil.WriteStringToFile(config.Changelog.Path, changelogStr)
 }

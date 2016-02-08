@@ -43,12 +43,6 @@ func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (rel
 		return releaseman.Config{}, err
 	}
 
-	//
-	// Collect changelog template path
-	if config, err = fillChangelogTemplatePath(config, c); err != nil {
-		return releaseman.Config{}, err
-	}
-
 	return config, nil
 }
 
@@ -57,6 +51,12 @@ func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (rel
 //=======================================
 
 func createChangelog(c *cli.Context) {
+	//
+	// Fail if git is not clean
+	if err := ensureCleanGit(); err != nil {
+		log.Fatalf("Ensure clean git failed, error: %#v", err)
+	}
+
 	//
 	// Build config
 	config := releaseman.Config{}
@@ -82,16 +82,8 @@ func createChangelog(c *cli.Context) {
 	}
 
 	//
-	// Print config
-	fmt.Println()
-	log.Infof("Your config:")
-	log.Infof(" * Development branch: %s", config.Release.DevelopmentBranch)
-	log.Infof(" * Release version: %s", config.Release.Version)
-	log.Infof(" * Changelog path: %s", config.Changelog.Path)
-	if config.Changelog.TemplatePath != "" {
-		log.Infof(" * Changelog template path: %s", config.Changelog.TemplatePath)
-	}
-	fmt.Println()
+	// Validate config
+	config.Print(releaseman.ChangelogMode)
 
 	if !releaseman.IsCIMode {
 		ok, err := goinp.AskForBool("Are you ready for creating Changelog?")
@@ -123,6 +115,7 @@ func createChangelog(c *cli.Context) {
 	startDate := startCommit.Date
 	endDate := endCommit.Date
 	relevantTags := taggedCommits
+	appendChangelog := false
 
 	if config.Changelog.Path != "" {
 		if exist, err := pathutil.IsPathExists(config.Changelog.Path); err != nil {
@@ -130,14 +123,15 @@ func createChangelog(c *cli.Context) {
 		} else if exist {
 			if len(taggedCommits) > 0 {
 				lastTaggedCommit := taggedCommits[len(taggedCommits)-1]
+				startCommit = lastTaggedCommit
 				startDate = lastTaggedCommit.Date
 				relevantTags = []git.CommitModel{lastTaggedCommit}
+				appendChangelog = true
 			}
 		}
 	}
 
-	fmt.Println()
-	log.Infof("Collect commits between (%s - %s)", startDate, endDate)
+	printCollectingCommits(startCommit, config.Release.Version)
 
 	fmt.Println()
 	log.Infof("=> Generating Changelog...")
@@ -145,7 +139,7 @@ func createChangelog(c *cli.Context) {
 	if err != nil {
 		log.Fatalf("Failed to get commits, error: %#v", err)
 	}
-	if err := releaseman.WriteChnagelog(commits, relevantTags, config); err != nil {
+	if err := releaseman.WriteChangelog(commits, relevantTags, config, appendChangelog); err != nil {
 		log.Fatalf("Failed to write Changelog, error: %#v", err)
 	}
 

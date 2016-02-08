@@ -18,7 +18,7 @@ import (
 // Utility
 //=======================================
 
-func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
+func collectInitConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
 	//
@@ -40,20 +40,8 @@ func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.C
 	}
 
 	//
-	// Fill release version
-	if config, err = fillVersion(config, c); err != nil {
-		return releaseman.Config{}, err
-	}
-
-	//
 	// Fill changelog path
 	if config, err = fillChangelogPath(config, c); err != nil {
-		return releaseman.Config{}, err
-	}
-
-	//
-	// Collect changelog template path
-	if config, err = fillChangelogTemplatePath(config, c); err != nil {
 		return releaseman.Config{}, err
 	}
 
@@ -88,12 +76,14 @@ func initRelease(c *cli.Context) {
 		}
 	}
 
-	releaseConfig, err := collectConfigParams(releaseman.Config{}, c)
+	releaseConfig, err := collectInitConfigParams(releaseman.Config{}, c)
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
 
-	log.Infof("releaseConfig: %#v", releaseConfig)
+	//
+	// Print config
+	releaseConfig.Print(releaseman.FullMode)
 
 	tmpl, err := template.New("config").Parse(releaseman.ReleaseConfigTemplate)
 	if err != nil {

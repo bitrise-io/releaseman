@@ -125,13 +125,13 @@ func versionSegmentIdx(segmentStr string) (int, error) {
 	segmentIdx := 0
 	switch segmentStr {
 	case PatchKey:
-		segmentIdx = 0
+		segmentIdx = 2
 	case MinorKey:
 		segmentIdx = 1
 	case MajorKey:
-		segmentIdx = 2
+		segmentIdx = 0
 	default:
-		return -1, fmt.Errorf("Invalid segemtn name (%s)", segmentStr)
+		return -1, fmt.Errorf("Invalid segment name (%s)", segmentStr)
 	}
 	return segmentIdx, nil
 }
@@ -221,27 +221,18 @@ func fillChangelogPath(config releaseman.Config, c *cli.Context) (releaseman.Con
 	return config, nil
 }
 
-func fillChangelogTemplatePath(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
-	var err error
+//=======================================
+// Ensure
+//=======================================
 
-	if c.IsSet(ChangelogTemplatePathKey) {
-		config.Changelog.TemplatePath = c.String(ChangelogTemplatePathKey)
+func ensureCleanGit() error {
+	if areChanges, err := git.AreUncommitedChanges(); err != nil {
+		return err
+	} else if areChanges {
+		return errors.New("There are uncommited changes in your git, please commit your changes before continue release!")
 	}
-	if config.Changelog.TemplatePath == "" {
-		if !releaseman.IsCIMode {
-			config.Changelog.TemplatePath, err = askForChangelogTemplatePath()
-			if err != nil {
-				return releaseman.Config{}, err
-			}
-		}
-	}
-
-	return config, nil
+	return nil
 }
-
-//=======================================
-// Ensure current branch
-//=======================================
 
 func ensureCurrentBranch(config releaseman.Config) error {
 	currentBranch, err := git.CurrentBranchName()
@@ -289,4 +280,13 @@ func printRollBackMessage() {
 	log.Infoln("* to roll back to the remote state:")
 	log.Infoln("    $ git reset --hard origin/[branch-name]")
 	fmt.Println()
+}
+
+func printCollectingCommits(startCommit git.CommitModel, nextVersion string) {
+	fmt.Println()
+	if startCommit.Tag != "" {
+		log.Infof("Collecting commits between (%s - %s)", startCommit.Tag, nextVersion)
+	} else {
+		log.Infof("Collecting commits between (initial commit - %s)", nextVersion)
+	}
 }

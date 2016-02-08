@@ -37,9 +37,6 @@ const (
 	// ChangelogPathKey ...
 	ChangelogPathKey = "changelog-path"
 
-	// ChangelogTemplatePathKey ...
-	ChangelogTemplatePathKey = "changelog-template-path"
-
 	// BumpVersionKey ...
 	BumpVersionKey = "bump-version"
 	// PatchKey ...
@@ -78,10 +75,6 @@ var (
 					Name:  ChangelogPathKey,
 					Usage: "Change log path",
 				},
-				cli.StringFlag{
-					Name:  ChangelogTemplatePathKey,
-					Usage: "Change log template path",
-				},
 			},
 		},
 		{
@@ -105,10 +98,6 @@ var (
 				cli.StringFlag{
 					Name:  ChangelogPathKey,
 					Usage: "changelog path",
-				},
-				cli.StringFlag{
-					Name:  ChangelogTemplatePathKey,
-					Usage: "changelog template path",
 				},
 			},
 		},

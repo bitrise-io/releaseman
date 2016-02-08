@@ -3,15 +3,13 @@
 Your friendly Release helper.
 
 Using this tool is as easy as running `releaseman create` and following the guide
-it prints. `releaseman` helps you generating changelog and tagging your states.
+it prints. `releaseman` helps you generating changelog and releasing new version.
 
 **What this tool does:**
 
-1. Collects your git commit messages between start and end states
-2. Creates changelog based on commit messages
-3. Adds the changelog to your git and makes commit on development branch
-4. Merges your development branch into your release branch and commits
-5. Tag the release branch with the release version
+1. Generates changelog `releaseman create-changelog`
+2. Release new version `releaseman create-release`
+3. Generates changelog and release new version `releaseman create`
 
 **What this tool does not:**
 
@@ -21,12 +19,102 @@ it prints. `releaseman` helps you generating changelog and tagging your states.
 
 * if you want to undo the last commit you can call:
   `git reset --hard HEAD~1`
+* to delete tag:
+  `$ git tag -d [TAG]`
+  `$ git push origin :refs/tags/[TAG]`
 * to roll back to the remote state:'
   `git reset --hard origin/[branch-name]`
 
-### How to use
+## How to use
 
-1. Simply you can start creating release with `releaseman create` and following the guide
-2. You can provide required inputs as cli arguments `releaseman create --development-branch develop --release-branch master --start-state 1.0.0 --end-state "current state" --changelog-path ./changelog --release-version 1.0.1`
-3. Or you can provide a configuration file in your repository root (where you run releaseman) with name `config.yml` format example: THIS_REPO_ROOT/configs/config.yml
-4. If you provide config.yml and also cli params, cli params will override the values in the config.yml (only during the run). This allows you to provide static params in your config, and dynamic ones as cli args.
+### Init
+
+*Interactive:*
+
+Just start with creating your release configuration, type in `releaseman init` and follow the printed guide.
+
+### Create changelog
+
+*Interactive:*
+
+Type in `releaseman create-changelog` and follow the printed guide.
+
+---
+
+*cli:*
+
+Releaseman needs the following informations to creating changelog:
+
+* `--development-branch`: changelog will generated based on this branchs commits
+* `--version`: your current state will marked with this version
+* `--bump-version`: if you have tagged git states, use this to auto increment latest tag, and use to mark the current state in changelog [options: patch, minor, major]
+* `--changelog-path`
+
+*Evrey input you provide with flag will used instead of the value you provided in your release_config.yml. If you want to use value from config just omitt the related flag.*
+
+May your command looks like:
+
+* `releaseman create-changelog --version 1.1.1` *in common case: use config, and define the missing inut*
+* `releaseman create-changelog --bump-version major` *in common case: use config, and define the missing inut, if you have tags*
+* `releaseman create-changelog --development-branch develop --version 1.1.1 --changelog-path ./changelog.md` *to override all your configs*
+* `releaseman create-changelog --development-branch develop --bump-version major --changelog-path ./changelog.md` *to override all your configs, if you have tags*
+
+---
+
+
+### Release new version
+
+*Interactive:*
+
+Type in `releaseman create-release` and follow the printed guide.
+
+---
+
+*cli:*
+
+Releaseman needs the following informations for releasing new version:
+
+* `--development-branch`: changes on this branch will merged to release branch
+* `--release-branch`: changes on development branch will merged into this branch and this branch will tagged with the release version
+* `--version`: release version
+* `--bump-version`: if you have tagged git states, use this to auto increment latest tag, and use as release version
+
+*Evrey input you provide with flag will used instead of the value you provided in your release_config.yml. If you want to use value from config just omitt the related flag.*
+
+May your command looks like:
+
+* `releaseman create-release --version 1.1.1` *in common case: use config, and define the missing inut*
+* `releaseman create-release --bump-version major` *in common case: use config, and define the missing inut, if you have tags*
+* `releaseman create-release --development-branch develop --release-branch master --version 1.1.1` *to override all your configs*
+* `releaseman create-release --development-branch develop --release-branch master --bump-version major` *to override all your configs, if you have tags*
+
+---
+
+### Create changelog and Release new version
+
+*Interactive:*
+
+Type in `releaseman create` and follow the printed guide.
+
+---
+
+*cli:*
+
+Releaseman needs the following informations for create changelog and release new version:
+
+* `--development-branch`: changelog will generated based on this branchs commits and changes on this branch will merged to release branch
+* `--release-branch`: changes on development branch will merged into this branch and this branch will tagged with the release version
+* `--version`: release version
+* `--bump-version`: if you have tagged git states, use this to auto increment latest tag, and use as release version
+* `--changelog-path`
+
+*Evrey input you provide with flag will used instead of the value you provided in your release_config.yml. If you want to use value from config just omitt the related flag.*
+
+May your command looks like:
+
+* `releaseman create --version 1.1.1` *in common case: use config, and define the missing inut*
+* `releaseman create --bump-version major` *in common case: use config, and define the missing inut, if you have tags*
+* `releaseman create --development-branch develop --release-branch master --version 1.1.1 --changelog-path ./changelog.md` *to override all your configs*
+* `releaseman create --development-branch develop --release-branch master --bump-version major --changelog-path ./changelog.md` *to override all your configs, if you have tags*
+
+---

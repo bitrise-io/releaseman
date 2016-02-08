@@ -13,19 +13,55 @@ import (
 )
 
 //=======================================
+// Utility
+//=======================================
+
+func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
+	var err error
+
+	//
+	// Fill development branch
+	if config, err = fillDevelopmetnBranch(config, c); err != nil {
+		return releaseman.Config{}, err
+	}
+
+	//
+	// Ensure current branch
+	if err := ensureCurrentBranch(config); err != nil {
+		return releaseman.Config{}, err
+	}
+
+	//
+	// Fill release branch
+	if config, err = fillReleaseBranch(config, c); err != nil {
+		return releaseman.Config{}, err
+	}
+
+	//
+	// Fill release version
+	if config, err = fillVersion(config, c); err != nil {
+		return releaseman.Config{}, err
+	}
+
+	//
+	// Fill changelog path
+	if config, err = fillChangelogPath(config, c); err != nil {
+		return releaseman.Config{}, err
+	}
+
+	return config, nil
+}
+
+//=======================================
 // Main
 //=======================================
 
 func create(c *cli.Context) {
 	//
 	// Fail if git is not clean
-	if areChanges, err := git.AreUncommitedChanges(); err != nil {
-		log.Fatalf("Failed to get uncommited changes, error: %#v", err)
-	} else if areChanges {
-		log.Fatalf("There are uncommited changes in your git, please commit your changes before continue release!")
+	if err := ensureCleanGit(); err != nil {
+		log.Fatalf("Ensure clean git failed, error: %#v", err)
 	}
-
-	printRollBackMessage()
 
 	//
 	// Build config
@@ -51,18 +87,11 @@ func create(c *cli.Context) {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
 
+	printRollBackMessage()
+
 	//
-	// Print config
-	fmt.Println()
-	log.Infof("Your config:")
-	log.Infof(" * Development branch: %s", config.Release.DevelopmentBranch)
-	log.Infof(" * Release branch: %s", config.Release.ReleaseBranch)
-	log.Infof(" * Release version: %s", config.Release.Version)
-	log.Infof(" * Changelog path: %s", config.Changelog.Path)
-	if config.Changelog.TemplatePath != "" {
-		log.Infof(" * Changelog template path: %s", config.Changelog.TemplatePath)
-	}
-	fmt.Println()
+	// Validate config
+	config.Print(releaseman.FullMode)
 
 	if !releaseman.IsCIMode {
 		ok, err := goinp.AskForBool("Are you ready for release?")
@@ -94,21 +123,22 @@ func create(c *cli.Context) {
 	startDate := startCommit.Date
 	endDate := endCommit.Date
 	relevantTags := taggedCommits
+	appendChangelog := false
 
 	if config.Changelog.Path != "" {
 		if exist, err := pathutil.IsPathExists(config.Changelog.Path); err != nil {
 			log.Fatalf("Failed to check if path exist, error: %#v", err)
 		} else if exist {
 			if len(taggedCommits) > 0 {
-				lastTaggedCommit := taggedCommits[len(taggedCommits)-1]
-				startDate = lastTaggedCommit.Date
-				relevantTags = []git.CommitModel{lastTaggedCommit}
+				startCommit = taggedCommits[len(taggedCommits)-1]
+				startDate = startCommit.Date
+				relevantTags = []git.CommitModel{startCommit}
+				appendChangelog = true
 			}
 		}
 	}
 
-	fmt.Println()
-	log.Infof("Collect commits between (%s - %s)", startDate, endDate)
+	printCollectingCommits(startCommit, config.Release.Version)
 
 	fmt.Println()
 	log.Infof("=> Generating changelog...")
@@ -116,7 +146,7 @@ func create(c *cli.Context) {
 	if err != nil {
 		log.Fatalf("Failed to get commits, error: %#v", err)
 	}
-	if err := releaseman.WriteChnagelog(commits, relevantTags, config); err != nil {
+	if err := releaseman.WriteChangelog(commits, relevantTags, config, appendChangelog); err != nil {
 		log.Fatalf("Failed to write changelog, error: %#v", err)
 	}
 
