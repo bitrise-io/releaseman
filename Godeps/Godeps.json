@@ -8,7 +8,19 @@
 			"Rev": "446d1c146faa8ed3f4218f056fcd165f6bcfda81"
 		},
 		{
+			"ImportPath": "github.com/bitrise-io/depman/pathutil",
+			"Rev": "ea67af36adfec1f1d760b1b001067cdf59ce60af"
+		},
+		{
 			"ImportPath": "github.com/bitrise-io/go-utils/cmdex",
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
+		},
+		{
+			"ImportPath": "github.com/bitrise-io/go-utils/colorstring",
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
+		},
+		{
+			"ImportPath": "github.com/bitrise-io/go-utils/fileutil",
 			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
 		},
 		{
@@ -25,8 +37,16 @@
 			"Rev": "b5232bb2934f606f9f27a1305f1eea224e8e8b88"
 		},
 		{
+			"ImportPath": "github.com/hashicorp/go-version",
+			"Rev": "7e3c02b30806fa5779d3bdfc152ce4c6f40e7b38"
+		},
+		{
 			"ImportPath": "golang.org/x/sys/unix",
 			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "f7716cbe52baa25d2e9b0d0da546fcf909fc16b4"
 		}
 	]
 }

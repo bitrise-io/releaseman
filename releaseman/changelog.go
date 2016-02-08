@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-tools/releaseman/git"
+	version "github.com/hashicorp/go-version"
 )
 
 //=======================================
@@ -128,6 +129,18 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 	changelog.Sections = reversedSections(changelog.Sections)
 
 	return changelog
+}
+
+//=======================================
+// Main
+//=======================================
+
+// BumpedVersion ...
+func BumpedVersion(versionStr, partName string) (string, error) {
+	version, err := version.NewVersion("1.2")
+	if err != nil {
+		return err
+	}
 }
 
 // WriteChnagelog ...
