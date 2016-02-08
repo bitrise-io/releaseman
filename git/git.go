@@ -29,6 +29,9 @@ func parseDate(unixTimeStampStr string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
+	if i < 0 {
+		return time.Time{}, fmt.Errorf("Invalid time stamp (%s)", unixTimeStampStr)
+	}
 	tm := time.Unix(i, 0)
 
 	return tm, nil
@@ -40,6 +43,10 @@ func parseCommit(commitLineStr string) (CommitModel, error) {
 	results := re.FindAllStringSubmatch(commitLineStr, -1)
 
 	for _, v := range results {
+		if v[1] == "" || v[2] == "" || v[4] == "" {
+			return CommitModel{}, fmt.Errorf("Failed to parse commit: %s", commitLineStr)
+		}
+
 		hash := v[1]
 		date, err := parseDate(v[2])
 		if err != nil {

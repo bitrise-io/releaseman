@@ -46,14 +46,6 @@ type ChangelogModel struct {
 // Utility
 //=======================================
 
-func reverseCommits(commits []git.CommitModel) []git.CommitModel {
-	reversed := []git.CommitModel{}
-	for i := len(commits) - 1; i >= 0; i-- {
-		reversed = append(reversed, commits[i])
-	}
-	return reversed
-}
-
 func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.CommitModel) []git.CommitModel {
 	relevantCommits := []git.CommitModel{}
 	isRelevantCommit := false
@@ -75,15 +67,7 @@ func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.Comm
 	return relevantCommits
 }
 
-func changeList(commits []git.CommitModel) []string {
-	changes := []string{}
-	for _, commit := range commits {
-		changes = append(changes, commit.Message)
-	}
-	return changes
-}
-
-func reverseSections(sections []ChangelogSectionModel) []ChangelogSectionModel {
+func reversedSections(sections []ChangelogSectionModel) []ChangelogSectionModel {
 	reversed := []ChangelogSectionModel{}
 	for i := len(sections) - 1; i >= 0; i-- {
 		reversed = append(reversed, sections[i])
@@ -141,7 +125,7 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 		changelog.Sections = append(changelog.Sections, section)
 	}
 
-	changelog.Sections = reverseSections(changelog.Sections)
+	changelog.Sections = reversedSections(changelog.Sections)
 
 	return changelog
 }
