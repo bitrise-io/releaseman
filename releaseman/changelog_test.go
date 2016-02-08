@@ -86,3 +86,37 @@ func TestReversedSections(t *testing.T) {
 	require.Equal(t, "2", reversed[1].StartTaggedCommit.Tag)
 	require.Equal(t, "1", reversed[2].StartTaggedCommit.Tag)
 }
+
+func TestBumpVersion(t *testing.T) {
+	bumpedVersion, err := BumpedVersion("", 0)
+	require.NotEqual(t, nil, err)
+	require.Equal(t, "", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("-1", 0)
+	require.NotEqual(t, nil, err)
+	require.Equal(t, "", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("1", 0)
+	require.Equal(t, nil, err)
+	require.Equal(t, "2.0.0", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("1.1", 0)
+	require.Equal(t, nil, err)
+	require.Equal(t, "2.1.0", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("1.1", 1)
+	require.Equal(t, nil, err)
+	require.Equal(t, "1.2.0", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("1.1.1", 0)
+	require.Equal(t, nil, err)
+	require.Equal(t, "2.1.1", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("1.1.1", 1)
+	require.Equal(t, nil, err)
+	require.Equal(t, "1.2.1", bumpedVersion)
+
+	bumpedVersion, err = BumpedVersion("1.1.1", 2)
+	require.Equal(t, nil, err)
+	require.Equal(t, "1.1.2", bumpedVersion)
+}

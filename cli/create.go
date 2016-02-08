@@ -13,32 +13,6 @@ import (
 )
 
 //=======================================
-// Utility
-//=======================================
-
-func printRollBackMessage() {
-	fmt.Println()
-	log.Infoln("How to roll-back?")
-	log.Infoln("* if you want to undo the last commit you can call:")
-	log.Infoln("    $ git reset --hard HEAD~1")
-	log.Infoln("* to delete tag:")
-	log.Infoln("    $ git tag -d [TAG]")
-	log.Infoln("    $ git push origin :refs/tags/[TAG]")
-	log.Infoln("* to roll back to the remote state:")
-	log.Infoln("    $ git reset --hard origin/[branch-name]")
-	fmt.Println()
-}
-
-func firstCommitAfterTag(taggedCommit git.CommitModel, commits []git.CommitModel) (git.CommitModel, bool) {
-	for _, commit := range commits {
-		if taggedCommit.Date.Sub(commit.Date) < 0 {
-			return commit, true
-		}
-	}
-	return git.CommitModel{}, false
-}
-
-//=======================================
 // Main
 //=======================================
 

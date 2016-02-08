@@ -42,13 +42,19 @@ const (
 
 	// BumpVersionKey ...
 	BumpVersionKey = "bump-version"
+	// PatchKey ...
+	PatchKey = "patch"
+	// MinorKey ...
+	MinorKey = "minor"
+	// MajorKey ...
+	MajorKey = "major"
 )
 
 var (
 	commands = []cli.Command{
 		{
 			Name:   "create",
-			Usage:  "Creates changelog and new release",
+			Usage:  "Create changelog and release new version",
 			Action: create,
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -80,7 +86,7 @@ var (
 		},
 		{
 			Name:   "create-changelog",
-			Usage:  "Creates changelog",
+			Usage:  "Create changelog",
 			Action: createChangelog,
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -108,7 +114,7 @@ var (
 		},
 		{
 			Name:   "create-release",
-			Usage:  "Creates release",
+			Usage:  "Release new version",
 			Action: createRelease,
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -132,7 +138,7 @@ var (
 		},
 		{
 			Name:   "init",
-			Usage:  "Initialize release_config.yml",
+			Usage:  "Initialize release configuration",
 			Action: initRelease,
 		},
 	}

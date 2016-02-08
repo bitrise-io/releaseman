@@ -16,118 +16,37 @@ import (
 // Utility
 //=======================================
 
-func askForChangelogPath() (string, error) {
-	fmt.Println()
-	return goinp.AskForString("Type in changelog path!")
-}
-
-func askForChangelogTemplatePath() (string, error) {
-	fmt.Println()
-	return goinp.AskForString("Type in changelog template path, or press enter to use default one!")
-}
-
 func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
-	if c.IsSet(DevelopmentBranchKey) {
-		config.Release.DevelopmentBranch = c.String(DevelopmentBranchKey)
-	}
-	if config.Release.DevelopmentBranch == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: development branch")
-		} else {
-			config.Release.DevelopmentBranch, err = askForDevelopmentBranch()
-			if err != nil {
-				log.Fatalf("Failed to ask for development branch, error: %s", err)
-			}
-		}
+
+	//
+	// Fill development branch
+	if config, err = fillDevelopmetnBranch(config, c); err != nil {
+		return releaseman.Config{}, err
 	}
 
 	//
-	// Checkout the development branch
-	currentBranch, err := git.CurrentBranchName()
-	if err != nil {
-		log.Fatalf("Failed to get current branch name, error: %#v", err)
+	// Ensure current branch
+	if err := ensureCurrentBranch(config); err != nil {
+		return releaseman.Config{}, err
 	}
 
-	if config.Release.DevelopmentBranch != currentBranch {
-		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
-
-		fmt.Println()
-		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch))
-		if err != nil {
-			log.Fatalf("Failed to ask for checkout, error: %#v", err)
-		}
-
-		if !checkout {
-			log.Fatalf("Current branch should be the development branch (%s)!", config.Release.DevelopmentBranch)
-		}
-
-		if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
-			log.Fatalf("Failed to checkout branch (%s), error: %#v", config.Release.DevelopmentBranch, err)
-		}
+	//
+	// Fill release version
+	if config, err = fillVersion(config, c); err != nil {
+		return releaseman.Config{}, err
 	}
 
-	if c.IsSet(VersionKey) {
-		config.Release.Version = c.String(VersionKey)
-	}
-	if config.Release.Version == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: release version")
-		} else {
-			tags, err := git.TaggedCommits()
-			if err != nil {
-				log.Fatalf("Failed to list tagged commits, error: %#v", err)
-			}
-
-			if len(tags) > 0 {
-				fmt.Println()
-				log.Infof("Your previous tags:")
-				for _, taggedCommit := range tags {
-					fmt.Printf("* %s\n", taggedCommit.Tag)
-				}
-			}
-
-			version, err := askForReleaseVersion()
-			if err != nil {
-				log.Fatalf("Failed to ask for release version, error: %s", err)
-			}
-
-			for _, taggedCommit := range tags {
-				if taggedCommit.Tag == version {
-					log.Fatalf("Tag (%s) already exist", version)
-				}
-			}
-
-			config.Release.Version = version
-		}
+	//
+	// Fill changelog path
+	if config, err = fillChangelogPath(config, c); err != nil {
+		return releaseman.Config{}, err
 	}
 
-	if c.IsSet(ChangelogPathKey) {
-		config.Changelog.Path = c.String(ChangelogPathKey)
-	}
-	if config.Changelog.Path == "" {
-		if releaseman.IsCIMode {
-			log.Fatalln("Missing required input: changelog path")
-		} else {
-			config.Changelog.Path, err = askForChangelogPath()
-			if err != nil {
-				log.Fatalf("Failed to ask for changelog path, error: %s", err)
-			}
-		}
-	}
-
-	if c.IsSet(ChangelogTemplatePathKey) {
-		config.Changelog.TemplatePath = c.String(ChangelogTemplatePathKey)
-	}
-	if config.Changelog.TemplatePath == "" {
-		if releaseman.IsCIMode {
-			// Use default changelog template
-		} else {
-			config.Changelog.TemplatePath, err = askForChangelogTemplatePath()
-			if err != nil {
-				log.Fatalf("Failed to ask for changelog path, error: %s", err)
-			}
-		}
+	//
+	// Collect changelog template path
+	if config, err = fillChangelogTemplatePath(config, c); err != nil {
+		return releaseman.Config{}, err
 	}
 
 	return config, nil

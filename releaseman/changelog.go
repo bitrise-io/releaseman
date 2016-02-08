@@ -2,6 +2,7 @@ package releaseman
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"text/template"
 	"time"
@@ -136,11 +137,16 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 //=======================================
 
 // BumpedVersion ...
-func BumpedVersion(versionStr, partName string) (string, error) {
-	version, err := version.NewVersion("1.2")
+func BumpedVersion(versionStr string, segmentIdx int) (string, error) {
+	version, err := version.NewVersion(versionStr)
 	if err != nil {
-		return err
+		return "", err
 	}
+	if len(version.Segments()) < segmentIdx-1 {
+		return "", fmt.Errorf("Version segments length (%d), increment segemnt at idx (%d)", len(version.Segments()), segmentIdx)
+	}
+	version.Segments()[segmentIdx] = version.Segments()[segmentIdx] + 1
+	return version.String(), nil
 }
 
 // WriteChnagelog ...
