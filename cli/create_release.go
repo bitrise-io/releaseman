@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bitrise-io/depman/pathutil"
 	"github.com/bitrise-io/go-utils/colorstring"
-	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
@@ -16,7 +16,7 @@ import (
 // Utility
 //=======================================
 
-func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
+func collectReleaseConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
 	//
@@ -43,12 +43,6 @@ func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.C
 		return releaseman.Config{}, err
 	}
 
-	//
-	// Fill changelog path
-	if config, err = fillChangelogPath(config, c); err != nil {
-		return releaseman.Config{}, err
-	}
-
 	return config, nil
 }
 
@@ -56,7 +50,7 @@ func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.C
 // Main
 //=======================================
 
-func create(c *cli.Context) {
+func createRelease(c *cli.Context) {
 	//
 	// Fail if git is not clean
 	if err := ensureCleanGit(); err != nil {
@@ -82,7 +76,7 @@ func create(c *cli.Context) {
 		}
 	}
 
-	config, err := collectConfigParams(config, c)
+	config, err := collectReleaseConfigParams(config, c)
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
@@ -91,7 +85,7 @@ func create(c *cli.Context) {
 
 	//
 	// Validate config
-	config.Print(releaseman.FullMode)
+	config.Print(releaseman.ReleaseMode)
 
 	if !releaseman.IsCIMode {
 		ok, err := goinp.AskForBool("Are you ready for release?")
@@ -101,63 +95,6 @@ func create(c *cli.Context) {
 		if !ok {
 			log.Fatal("Aborted release")
 		}
-	}
-
-	//
-	// Generate changelog and release
-	startCommit, err := git.FirstCommit()
-	if err != nil {
-		log.Fatalf("Failed to get first commit, error: %#v", err)
-	}
-
-	endCommit, err := git.LatestCommit()
-	if err != nil {
-		log.Fatalf("Failed to get latest commit, error: %#v", err)
-	}
-
-	taggedCommits, err := git.TaggedCommits()
-	if err != nil {
-		log.Fatalf("Failed to get tagged commits, error: %#v", err)
-	}
-
-	startDate := startCommit.Date
-	endDate := endCommit.Date
-	relevantTags := taggedCommits
-	appendChangelog := false
-
-	if config.Changelog.Path != "" {
-		if exist, err := pathutil.IsPathExists(config.Changelog.Path); err != nil {
-			log.Fatalf("Failed to check if path exist, error: %#v", err)
-		} else if exist {
-			if len(taggedCommits) > 0 {
-				startCommit = taggedCommits[len(taggedCommits)-1]
-				startDate = startCommit.Date
-				relevantTags = []git.CommitModel{startCommit}
-				appendChangelog = true
-			}
-		}
-	}
-
-	printCollectingCommits(startCommit, config.Release.Version)
-
-	fmt.Println()
-	log.Infof("=> Generating changelog...")
-	commits, err := git.GetCommitsBetween(startDate, endDate)
-	if err != nil {
-		log.Fatalf("Failed to get commits, error: %#v", err)
-	}
-	if err := releaseman.WriteChangelog(commits, relevantTags, config, appendChangelog); err != nil {
-		log.Fatalf("Failed to write changelog, error: %#v", err)
-	}
-
-	fmt.Println()
-	log.Infof("=> Adding changes to git...")
-	if err := git.Add([]string{config.Changelog.Path}); err != nil {
-		log.Fatalf("Failed to git add, error: %s", err)
-	}
-
-	if err := git.Commit(fmt.Sprintf("v%s", config.Release.Version)); err != nil {
-		log.Fatalf("Failed to git commit, error: %s", err)
 	}
 
 	fmt.Println()
