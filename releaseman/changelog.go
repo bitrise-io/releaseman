@@ -168,6 +168,7 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 	changelogStr := changelogBytes.String()
 
 	if append {
+		log.Debugln("Changelog exist, append new version")
 		previosChangelogStr, err := fileutil.ReadStringFromFile(config.Changelog.Path)
 		if err != nil {
 			return err

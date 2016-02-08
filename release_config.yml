@@ -2,4 +2,4 @@ release:
   development_branch: develop
   release_branch: master
 changelog:
-  path: ./changelog/changelog.md
+  path: ./_changelog/changelog.md
