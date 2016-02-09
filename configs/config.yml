@@ -1,6 +1,0 @@
-development_branch: master
-release_branch: master
-start_state: ""
-end_state: ""
-changelog_path: "./changelog"
-release_version: "1.1.0"

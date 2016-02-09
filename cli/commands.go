@@ -37,15 +37,21 @@ const (
 	// ChangelogPathKey ...
 	ChangelogPathKey = "changelog-path"
 
-	// ReleaseVersionKey ...
-	ReleaseVersionKey = "release-version"
+	// BumpVersionKey ...
+	BumpVersionKey = "bump-version"
+	// PatchKey ...
+	PatchKey = "patch"
+	// MinorKey ...
+	MinorKey = "minor"
+	// MajorKey ...
+	MajorKey = "major"
 )
 
 var (
 	commands = []cli.Command{
 		{
 			Name:   "create",
-			Usage:  "Creates new release",
+			Usage:  "Create changelog and release new version",
 			Action: create,
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -57,22 +63,72 @@ var (
 					Usage: "Release branch",
 				},
 				cli.StringFlag{
-					Name:  StartStateKey,
-					Usage: "Start state [initial commit/tag]",
+					Name:  VersionKey,
+					Usage: "Release version",
 				},
 				cli.StringFlag{
-					Name:  EndStateKey,
-					Usage: "End state [tag/current state]",
+					Name:  BumpVersionKey,
+					Value: "patch",
+					Usage: "Bump version (options: patch, minor, major).",
 				},
 				cli.StringFlag{
 					Name:  ChangelogPathKey,
-					Usage: "Changelog path",
-				},
-				cli.StringFlag{
-					Name:  ReleaseVersionKey,
-					Usage: "Release version",
+					Usage: "Change log path",
 				},
 			},
+		},
+		{
+			Name:   "create-changelog",
+			Usage:  "Create changelog",
+			Action: createChangelog,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  DevelopmentBranchKey,
+					Usage: "Development branch",
+				},
+				cli.StringFlag{
+					Name:  VersionKey,
+					Usage: "Release version",
+				},
+				cli.StringFlag{
+					Name:  BumpVersionKey,
+					Value: "patch",
+					Usage: "Bump version (options: patch, minor, major).",
+				},
+				cli.StringFlag{
+					Name:  ChangelogPathKey,
+					Usage: "changelog path",
+				},
+			},
+		},
+		{
+			Name:   "create-release",
+			Usage:  "Release new version",
+			Action: createRelease,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  DevelopmentBranchKey,
+					Usage: "Development branch",
+				},
+				cli.StringFlag{
+					Name:  ReleaseBranchKey,
+					Usage: "Release branch",
+				},
+				cli.StringFlag{
+					Name:  VersionKey,
+					Usage: "Release version",
+				},
+				cli.StringFlag{
+					Name:  BumpVersionKey,
+					Value: "patch",
+					Usage: "Bump version (options: patch, minor, major).",
+				},
+			},
+		},
+		{
+			Name:   "init",
+			Usage:  "Initialize release configuration",
+			Action: initRelease,
 		},
 	}
 
