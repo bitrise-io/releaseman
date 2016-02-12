@@ -7,6 +7,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-tools/releaseman/releaseman"
+	"github.com/bitrise-tools/releaseman/version"
 	"github.com/codegangsta/cli"
 )
 
@@ -37,7 +38,7 @@ func Run() {
 	app := cli.NewApp()
 	app.Name = path.Base(os.Args[0])
 	app.Usage = "Helps for generating changelog and releasing new version"
-	app.Version = "0.0.1"
+	app.Version = version.VERSION
 
 	app.Author = ""
 	app.Email = ""
