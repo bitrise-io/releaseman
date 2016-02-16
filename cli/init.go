@@ -2,14 +2,15 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"os"
+	"strings"
 	"text/template"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
 )
@@ -55,12 +56,6 @@ func collectInitConfigParams(config releaseman.Config, c *cli.Context) (releasem
 func initRelease(c *cli.Context) {
 	//
 	// Fail if git is not clean
-	if areChanges, err := git.AreUncommitedChanges(); err != nil {
-		log.Fatalf("Failed to get uncommited changes, error: %#v", err)
-	} else if areChanges {
-		log.Fatalf("There are uncommited changes in your git, please commit your changes before continue release!")
-	}
-
 	if exist, err := pathutil.IsPathExists(releaseman.DefaultConfigPth); err != nil {
 		log.Fatalf("Failed to check path (%s), error: %#v", releaseman.DefaultConfigPth, err)
 	} else if exist {
@@ -80,6 +75,7 @@ func initRelease(c *cli.Context) {
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
+	releaseConfig.Changelog.ItemTemplate = releaseman.ChangelogTemplate
 
 	//
 	// Print config
@@ -90,18 +86,35 @@ func initRelease(c *cli.Context) {
 		log.Fatalf("Failed to parse template, error: %#v", err)
 	}
 
-	file, err := os.Create(releaseman.DefaultConfigPth)
-	if err != nil {
-		log.Fatalf("Failed to create realse config at (%s), error: %#v", releaseman.DefaultConfigPth, err)
-	}
-	fileWriter := bufio.NewWriter(file)
-
-	err = tmpl.Execute(fileWriter, releaseConfig)
+	var releaseConfigBytes bytes.Buffer
+	err = tmpl.Execute(&releaseConfigBytes, releaseConfig)
 	if err != nil {
 		log.Fatalf("Failed to execute template, error: %#v", err)
 	}
 
-	if err = fileWriter.Flush(); err != nil {
-		log.Fatalf("Failed to flush release config file, error: %#v", err)
+	scanner := bufio.NewScanner(&releaseConfigBytes)
+
+	fixed := ""
+	itemTemplateStart := false
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if strings.Contains(line, "  item_template: |") {
+			itemTemplateStart = true
+		} else {
+			if itemTemplateStart {
+				if !strings.HasPrefix(line, "    ") {
+					line = fmt.Sprintf("    %s", line)
+				}
+			}
+		}
+
+		if fixed == "" {
+			fixed = line
+		} else {
+			fixed = fmt.Sprintf("%s\n%s", fixed, line)
+		}
 	}
+
+	fileutil.WriteStringToFile(releaseman.DefaultConfigPth, fixed)
 }

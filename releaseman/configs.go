@@ -27,6 +27,8 @@ const ReleaseConfigTemplate = `release:
   release_branch: {{.Release.ReleaseBranch}}
 changelog:
   path: {{.Changelog.Path}}
+  item_template: |
+    {{.Changelog.ItemTemplate}}
 `
 
 var (

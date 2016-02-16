@@ -170,10 +170,7 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 
 		if len(tags) > 0 {
 			fmt.Println()
-			log.Infof("Your previous tags:")
-			for _, taggedCommit := range tags {
-				fmt.Printf("* %s\n", taggedCommit.Tag)
-			}
+			log.Infof("Your previous tag: %s", tags[len(tags)-1].Tag)
 		}
 
 		version, err := askForReleaseVersion()
