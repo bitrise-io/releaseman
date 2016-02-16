@@ -57,7 +57,7 @@ func askForReleaseBranch() (string, error) {
 
 func askForReleaseVersion() (string, error) {
 	fmt.Println()
-	return goinp.AskForString("Type in release version!")
+	return goinp.AskForString("Type in the new release version!")
 }
 
 func askForChangelogPath() (string, error) {
