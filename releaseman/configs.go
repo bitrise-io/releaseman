@@ -21,16 +21,6 @@ const (
 	CurrentStateStr = "current state"
 )
 
-// ReleaseConfigTemplate ...
-const ReleaseConfigTemplate = `release:
-  development_branch: {{.Release.DevelopmentBranch}}
-  release_branch: {{.Release.ReleaseBranch}}
-changelog:
-  path: {{.Changelog.Path}}
-  item_template: |
-    {{.Changelog.ItemTemplate}}
-`
-
 var (
 	// IsCIMode ...
 	IsCIMode = false
@@ -44,7 +34,7 @@ var (
 type Release struct {
 	DevelopmentBranch string `yaml:"development_branch"`
 	ReleaseBranch     string `yaml:"release_branch"`
-	Version           string `yaml:"version"`
+	Version           string `yaml:"version,omitempty"`
 }
 
 // Changelog ...

@@ -3,9 +3,9 @@ release:
   release_branch: master
 changelog:
   path: CHANGELOG.md
-  item_template: |
+  item_template: |-
     {{range .Sections}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
-    
+
     {{range $idx, $commit := .Commits}}* [{{trimm $commit.Hash 7}}] {{$commit.Author}} - {{$commit.Message}} ({{$commit.Date.Format "2006 Jan 02"}})
     {{end}}
     {{end}}
