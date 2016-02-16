@@ -17,9 +17,9 @@ import (
 //=======================================
 
 // ChangelogTemplate ...
-const ChangelogTemplate = `{{range .Sections}}### {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
+const ChangelogTemplate = `{{range .Sections}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 
-{{range $idx, $commit := .Commits}}* {{$commit.Message}}{{ "\n" }}{{end}}
+{{range $idx, $commit := .Commits}}* [{{$commit.Hash}}] {{$commit.Author}} commited: {{$commit.Message}} at: {{$commit.Date}} {{ "\n" }}{{end}}
 {{end}}`
 
 //=======================================
