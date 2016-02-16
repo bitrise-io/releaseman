@@ -19,8 +19,19 @@ import (
 // ChangelogTemplate ...
 const ChangelogTemplate = `{{range .Sections}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 
-{{range $idx, $commit := .Commits}}* [{{$commit.Hash}}] {{$commit.Author}} commited: {{$commit.Message}} at: {{$commit.Date}} {{ "\n" }}{{end}}
+{{range $idx, $commit := .Commits}}* [{{trimm $commit.Hash 7}}] {{$commit.Author}} - {{$commit.Message}} ({{$commit.Date.Format "2006 Jan 02"}})
+{{end}}
 {{end}}`
+
+var changelogTemplateFuncMap = template.FuncMap{
+	"trimm": func(str string, length int) string {
+		if len(str) < length {
+			return str
+		}
+
+		return str[0:length]
+	},
+}
 
 //=======================================
 // Models
@@ -154,7 +165,8 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 		changelogItemTemplateStr = config.Changelog.ItemTemplate
 	}
 
-	tmpl, err := template.New("changelog").Parse(changelogItemTemplateStr)
+	tmpl := template.New("changelog").Funcs(changelogTemplateFuncMap)
+	tmpl, err := tmpl.Parse(changelogItemTemplateStr)
 	if err != nil {
 		log.Fatalf("Failed to parse template, error: %#v", err)
 	}
