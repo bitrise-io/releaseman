@@ -52,12 +52,6 @@ func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (rel
 
 func createChangelog(c *cli.Context) {
 	//
-	// Fail if git is not clean
-	if err := ensureCleanGit(); err != nil {
-		log.Fatalf("Ensure clean git failed, error: %#v", err)
-	}
-
-	//
 	// Build config
 	config := releaseman.Config{}
 	configPath := ""

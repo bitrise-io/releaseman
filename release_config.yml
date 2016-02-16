@@ -2,4 +2,9 @@ release:
   development_branch: master
   release_branch: master
 changelog:
-  path: ./CHANGELOG.md
+  path: CHANGELOG.md
+  item_template: |
+    {{range .Sections}}### {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
+    
+    {{range $idx, $commit := .Commits}}* {{$commit.Message}}{{ "\n" }}{{end}}
+    {{end}}
