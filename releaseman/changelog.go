@@ -58,7 +58,7 @@ func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.Comm
 		}
 
 		if isRelevantCommit {
-			relevantCommits = append(relevantCommits, commit)
+			relevantCommits = append([]git.CommitModel{commit}, relevantCommits...)
 		}
 	}
 
