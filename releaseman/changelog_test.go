@@ -34,27 +34,27 @@ func TestCommitsBetween(t *testing.T) {
 
 	commits := commitsBetween(nil, nil, allCommits)
 	require.Equal(t, 4, len(commits))
-	require.Equal(t, "1", commits[0].Hash)
-	require.Equal(t, "2", commits[1].Hash)
-	require.Equal(t, "3", commits[2].Hash)
-	require.Equal(t, "4", commits[3].Hash)
+	require.Equal(t, "4", commits[0].Hash)
+	require.Equal(t, "3", commits[1].Hash)
+	require.Equal(t, "2", commits[2].Hash)
+	require.Equal(t, "1", commits[3].Hash)
 
 	commits = commitsBetween(nil, &unixTimestampEnd, allCommits)
 	require.Equal(t, 3, len(commits))
-	require.Equal(t, "1", commits[0].Hash)
+	require.Equal(t, "3", commits[0].Hash)
 	require.Equal(t, "2", commits[1].Hash)
-	require.Equal(t, "3", commits[2].Hash)
+	require.Equal(t, "1", commits[2].Hash)
 
 	commits = commitsBetween(&unixTimestampStart, nil, allCommits)
 	require.Equal(t, 3, len(commits))
-	require.Equal(t, "2", commits[0].Hash)
+	require.Equal(t, "4", commits[0].Hash)
 	require.Equal(t, "3", commits[1].Hash)
-	require.Equal(t, "4", commits[2].Hash)
+	require.Equal(t, "2", commits[2].Hash)
 
 	commits = commitsBetween(&unixTimestampStart, &unixTimestampEnd, allCommits)
 	require.Equal(t, 2, len(commits))
-	require.Equal(t, "2", commits[0].Hash)
-	require.Equal(t, "3", commits[1].Hash)
+	require.Equal(t, "3", commits[0].Hash)
+	require.Equal(t, "2", commits[1].Hash)
 }
 
 func TestReversedSections(t *testing.T) {

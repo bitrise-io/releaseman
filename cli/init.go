@@ -116,5 +116,7 @@ func initRelease(c *cli.Context) {
 		}
 	}
 
-	fileutil.WriteStringToFile(releaseman.DefaultConfigPth, fixed)
+	if err := fileutil.WriteStringToFile(releaseman.DefaultConfigPth, fixed); err != nil {
+		log.Fatalf("Failed to write config to file, error: %#v", err)
+	}
 }
