@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -167,6 +168,9 @@ func create(c *cli.Context) {
 	if err != nil {
 		log.Fatalf("Failed to get changes, error: %s", err)
 	}
+	log.Infof("Changes: %#v", changes)
+	os.Exit(1)
+
 	if err := git.Add(changes); err != nil {
 		log.Fatalf("Failed to git add, error: %s", err)
 	}
