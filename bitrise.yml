@@ -114,15 +114,18 @@ workflows:
             Build URL: ${BITRISE_BUILD_URL}
 
   create-release:
-    before_run:
-    - _test
+    # before_run:
+    # - _test
     steps:
     - script:
         title:
         inputs:
         - content: |
-            # export CI=true
-            releaseman create --bump-version-script "go run _scripts/bump_version.go -file version/version.go -segment 2"
+            export CI=true
+            releaseman create-changelog \
+              --get-version-script "go run _scripts/get_version.go -file version/version.go" \
+              --bump-version patch \
+              --set-version-script "bash _scripts/set_version.sh version/version.go"
 
   # create-release:
   #   before_run:

@@ -97,6 +97,17 @@ func createRelease(c *cli.Context) {
 		}
 	}
 
+	//
+	// Run set version script
+	if c.IsSet(SetVersionScriptKey) {
+		setVersionScript := c.String(SetVersionScriptKey)
+		if err := runSetVersionScript(setVersionScript, config.Release.Version); err != nil {
+			log.Fatalf("Failed to run set version script, error: %#v", err)
+		}
+	}
+
+	//
+	// Create release git changes
 	fmt.Println()
 	log.Infof("=> Merging changes into release branch...")
 	if err := git.CheckoutBranch(config.Release.ReleaseBranch); err != nil {

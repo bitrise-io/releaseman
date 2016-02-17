@@ -90,6 +90,15 @@ func createChangelog(c *cli.Context) {
 	}
 
 	//
+	// Run set version script
+	if c.IsSet(SetVersionScriptKey) {
+		setVersionScript := c.String(SetVersionScriptKey)
+		if err := runSetVersionScript(setVersionScript, config.Release.Version); err != nil {
+			log.Fatalf("Failed to run set version script, error: %#v", err)
+		}
+	}
+
+	//
 	// Generate Changelog
 	startCommit, err := git.FirstCommit()
 	if err != nil {

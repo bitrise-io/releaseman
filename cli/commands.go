@@ -46,8 +46,11 @@ const (
 	// MajorKey ...
 	MajorKey = "major"
 
-	// BumpVersionScriptKey ...
-	BumpVersionScriptKey = "bump-version-script"
+	// GetVersionScriptKey ...
+	GetVersionScriptKey = "get-version-script"
+
+	// SetVersionScriptKey ...
+	SetVersionScriptKey = "set-version-script"
 )
 
 var (
@@ -75,8 +78,12 @@ var (
 					Usage: "Bump version (options: patch, minor, major).",
 				},
 				cli.StringFlag{
-					Name:  BumpVersionScriptKey,
-					Usage: "Bump version script.",
+					Name:  GetVersionScriptKey,
+					Usage: "Script for getting current version.",
+				},
+				cli.StringFlag{
+					Name:  SetVersionScriptKey,
+					Usage: "Script for setting next version.",
 				},
 				cli.StringFlag{
 					Name:  ChangelogPathKey,
@@ -103,8 +110,12 @@ var (
 					Usage: "Bump version (options: patch, minor, major).",
 				},
 				cli.StringFlag{
-					Name:  BumpVersionScriptKey,
-					Usage: "Bump version script.",
+					Name:  GetVersionScriptKey,
+					Usage: "Script for getting current version.",
+				},
+				cli.StringFlag{
+					Name:  SetVersionScriptKey,
+					Usage: "Script for setting next version.",
 				},
 				cli.StringFlag{
 					Name:  ChangelogPathKey,
@@ -133,6 +144,14 @@ var (
 					Name:  BumpVersionKey,
 					Value: "patch",
 					Usage: "Bump version (options: patch, minor, major).",
+				},
+				cli.StringFlag{
+					Name:  GetVersionScriptKey,
+					Usage: "Script for getting current version.",
+				},
+				cli.StringFlag{
+					Name:  SetVersionScriptKey,
+					Usage: "Script for setting next version.",
 				},
 			},
 		},

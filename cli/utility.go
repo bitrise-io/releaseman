@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -17,6 +18,23 @@ import (
 //=======================================
 // Utility
 //=======================================
+
+func runSetVersionScript(script, nextVersion string) error {
+	parts := strings.Fields(script)
+	head := parts[0]
+	parts = parts[1:len(parts)]
+
+	envs := os.Environ()
+	envs = append(envs, fmt.Sprintf("next_version=%s", nextVersion))
+
+	cmd := exec.Command(head, parts...)
+	cmd.Env = envs
+	outBytes, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Failed to run set version script, out: %s, error: %#v", string(outBytes), err)
+	}
+	return nil
+}
 
 func bumpedVersion(versionStr string, segmentIdx int) (string, error) {
 	version, err := version.NewVersion(versionStr)
@@ -170,9 +188,11 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		return releaseman.Config{}, err
 	}
 
-	if c.IsSet(BumpVersionScriptKey) {
-		bumpVersionScript := c.String(BumpVersionScriptKey)
-		parts := strings.Fields(bumpVersionScript)
+	currentVersion := ""
+	if c.IsSet(GetVersionScriptKey) {
+		log.Infof("Get version script provided")
+		versionScript := c.String(GetVersionScriptKey)
+		parts := strings.Fields(versionScript)
 		head := parts[0]
 		parts = parts[1:len(parts)]
 
@@ -180,22 +200,28 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		if err != nil {
 			return releaseman.Config{}, fmt.Errorf("Failed to run bump script, out: %s, error: %#v", string(outBytes), err)
 		}
-		version := string(outBytes)
-		version = git.Strip(version)
+		versionStr := string(outBytes)
+		versionStr = git.Strip(versionStr)
 
-		config.Release.Version = version
-	} else if c.IsSet(BumpVersionKey) {
-		if len(tags) == 0 {
-			return releaseman.Config{}, errors.New("There are no tags, nothing to bump")
+		currentVersion = versionStr
+
+		log.Infof("currentVersion: %s", currentVersion)
+	} else if len(tags) != 0 {
+		currentVersion = tags[len(tags)-1].Tag
+	}
+
+	if c.IsSet(BumpVersionKey) {
+		log.Infof("Also bump version")
+		if currentVersion == "" {
+			return releaseman.Config{}, errors.New("Current version not found, nothing to bump")
 		}
 
 		segmentIdx, err := versionSegmentIdx(c.String(BumpVersionKey))
 		if err != nil {
 			return releaseman.Config{}, err
 		}
-		lastVersion := tags[len(tags)-1].Tag
 
-		config.Release.Version, err = bumpedVersion(lastVersion, segmentIdx)
+		config.Release.Version, err = bumpedVersion(currentVersion, segmentIdx)
 		if err != nil {
 			return releaseman.Config{}, err
 		}

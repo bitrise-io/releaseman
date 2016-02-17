@@ -104,7 +104,16 @@ func create(c *cli.Context) {
 	}
 
 	//
-	// Generate changelog and release
+	// Run set version script
+	if c.IsSet(SetVersionScriptKey) {
+		setVersionScript := c.String(SetVersionScriptKey)
+		if err := runSetVersionScript(setVersionScript, config.Release.Version); err != nil {
+			log.Fatalf("Failed to run set version script, error: %#v", err)
+		}
+	}
+
+	//
+	// Generate Changelog
 	startCommit, err := git.FirstCommit()
 	if err != nil {
 		log.Fatalf("Failed to get first commit, error: %#v", err)
@@ -150,6 +159,8 @@ func create(c *cli.Context) {
 		log.Fatalf("Failed to write changelog, error: %#v", err)
 	}
 
+	//
+	// Create release git changes
 	fmt.Println()
 	log.Infof("=> Adding changes to git...")
 	if err := git.Add([]string{config.Changelog.Path}); err != nil {
