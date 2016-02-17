@@ -123,6 +123,8 @@ workflows:
         - content: |
             #!/bin/bash
 
+            set -e
+
             # Draft new release
             export CI=true
             releaseman create \
