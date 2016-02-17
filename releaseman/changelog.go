@@ -2,14 +2,12 @@ package releaseman
 
 import (
 	"bytes"
-	"fmt"
 	"text/template"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-tools/releaseman/git"
-	version "github.com/hashicorp/go-version"
 )
 
 //=======================================
@@ -19,8 +17,19 @@ import (
 // ChangelogTemplate ...
 const ChangelogTemplate = `{{range .Sections}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 
-{{range $idx, $commit := .Commits}}* [{{$commit.Hash}}] {{$commit.Author}} commited: {{$commit.Message}} at: {{$commit.Date}} {{ "\n" }}{{end}}
+{{range $idx, $commit := .Commits}}* [{{trimm $commit.Hash 7}}] {{$commit.Author}} - {{$commit.Message}} ({{$commit.Date.Format "2006 Jan 02"}})
+{{end}}
 {{end}}`
+
+var changelogTemplateFuncMap = template.FuncMap{
+	"trimm": func(str string, length int) string {
+		if len(str) < length {
+			return str
+		}
+
+		return str[0:length]
+	},
+}
 
 //=======================================
 // Models
@@ -131,19 +140,6 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 // Main
 //=======================================
 
-// BumpedVersion ...
-func BumpedVersion(versionStr string, segmentIdx int) (string, error) {
-	version, err := version.NewVersion(versionStr)
-	if err != nil {
-		return "", err
-	}
-	if len(version.Segments()) < segmentIdx-1 {
-		return "", fmt.Errorf("Version segments length (%d), increment segemnt at idx (%d)", len(version.Segments()), segmentIdx)
-	}
-	version.Segments()[segmentIdx] = version.Segments()[segmentIdx] + 1
-	return version.String(), nil
-}
-
 // WriteChangelog ...
 func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, append bool) error {
 	changelog := generateChangelog(commits, taggedCommits, config.Release.Version)
@@ -154,7 +150,8 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 		changelogItemTemplateStr = config.Changelog.ItemTemplate
 	}
 
-	tmpl, err := template.New("changelog").Parse(changelogItemTemplateStr)
+	tmpl := template.New("changelog").Funcs(changelogTemplateFuncMap)
+	tmpl, err := tmpl.Parse(changelogItemTemplateStr)
 	if err != nil {
 		log.Fatalf("Failed to parse template, error: %#v", err)
 	}

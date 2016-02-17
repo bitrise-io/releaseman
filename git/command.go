@@ -58,12 +58,13 @@ func splitByNewLineAndStrip(str string) []string {
 			continue
 		}
 
-		out = append(out, strip(part))
+		out = append(out, Strip(part))
 	}
 	return out
 }
 
-func strip(str string) string {
+// Strip ...
+func Strip(str string) string {
 	dirty := true
 	strippedStr := str
 	for dirty {
@@ -79,7 +80,19 @@ func strip(str string) string {
 			strippedStr = strings.TrimSuffix(strippedStr, " ")
 		}
 
-		if !hasWhiteSpacePrefix && !hasWhiteSpaceSuffix {
+		hasNewlinePrefix := false
+		if strings.HasPrefix(strippedStr, "\n") {
+			hasNewlinePrefix = true
+			strippedStr = strings.TrimPrefix(strippedStr, "\n")
+		}
+
+		hasNewlineSuffix := false
+		if strings.HasSuffix(strippedStr, "\n") {
+			hasNewlinePrefix = true
+			strippedStr = strings.TrimSuffix(strippedStr, "\n")
+		}
+
+		if !hasWhiteSpacePrefix && !hasWhiteSpaceSuffix && !hasNewlinePrefix && !hasNewlineSuffix {
 			dirty = false
 		}
 	}

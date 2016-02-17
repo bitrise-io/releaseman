@@ -16,7 +16,7 @@ import (
 // Utility
 //=======================================
 
-func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
+func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
 	//
@@ -28,12 +28,6 @@ func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.C
 	//
 	// Ensure current branch
 	if err := ensureCurrentBranch(config); err != nil {
-		return releaseman.Config{}, err
-	}
-
-	//
-	// Fill release branch
-	if config, err = fillReleaseBranch(config, c); err != nil {
 		return releaseman.Config{}, err
 	}
 
@@ -56,13 +50,7 @@ func collectConfigParams(config releaseman.Config, c *cli.Context) (releaseman.C
 // Main
 //=======================================
 
-func create(c *cli.Context) {
-	//
-	// Fail if git is not clean
-	if err := ensureCleanGit(); err != nil {
-		log.Fatalf("Ensure clean git failed, error: %#v", err)
-	}
-
+func createChangelog(c *cli.Context) {
 	//
 	// Build config
 	config := releaseman.Config{}
@@ -82,29 +70,36 @@ func create(c *cli.Context) {
 		}
 	}
 
-	config, err := collectConfigParams(config, c)
+	config, err := collectChangelogConfigParams(config, c)
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
 
-	printRollBackMessage()
-
 	//
 	// Validate config
-	config.Print(releaseman.FullMode)
+	config.Print(releaseman.ChangelogMode)
 
 	if !releaseman.IsCIMode {
-		ok, err := goinp.AskForBool("Are you ready for release?")
+		ok, err := goinp.AskForBool("Are you ready for creating Changelog?")
 		if err != nil {
 			log.Fatalf("Failed to ask for input, error: %s", err)
 		}
 		if !ok {
-			log.Fatal("Aborted release")
+			log.Fatal("Aborted create Changelog")
 		}
 	}
 
 	//
-	// Generate changelog and release
+	// Run set version script
+	if c.IsSet(SetVersionScriptKey) {
+		setVersionScript := c.String(SetVersionScriptKey)
+		if err := runSetVersionScript(setVersionScript, config.Release.Version); err != nil {
+			log.Fatalf("Failed to run set version script, error: %#v", err)
+		}
+	}
+
+	//
+	// Generate Changelog
 	startCommit, err := git.FirstCommit()
 	if err != nil {
 		log.Fatalf("Failed to get first commit, error: %#v", err)
@@ -130,9 +125,10 @@ func create(c *cli.Context) {
 			log.Fatalf("Failed to check if path exist, error: %#v", err)
 		} else if exist {
 			if len(taggedCommits) > 0 {
-				startCommit = taggedCommits[len(taggedCommits)-1]
-				startDate = startCommit.Date
-				relevantTags = []git.CommitModel{startCommit}
+				lastTaggedCommit := taggedCommits[len(taggedCommits)-1]
+				startCommit = lastTaggedCommit
+				startDate = lastTaggedCommit.Date
+				relevantTags = []git.CommitModel{lastTaggedCommit}
 				appendChangelog = true
 			}
 		}
@@ -141,47 +137,15 @@ func create(c *cli.Context) {
 	printCollectingCommits(startCommit, config.Release.Version)
 
 	fmt.Println()
-	log.Infof("=> Generating changelog...")
+	log.Infof("=> Generating Changelog...")
 	commits, err := git.GetCommitsBetween(startDate, endDate)
 	if err != nil {
 		log.Fatalf("Failed to get commits, error: %#v", err)
 	}
 	if err := releaseman.WriteChangelog(commits, relevantTags, config, appendChangelog); err != nil {
-		log.Fatalf("Failed to write changelog, error: %#v", err)
+		log.Fatalf("Failed to write Changelog, error: %#v", err)
 	}
 
 	fmt.Println()
-	log.Infof("=> Adding changes to git...")
-	if err := git.Add([]string{config.Changelog.Path}); err != nil {
-		log.Fatalf("Failed to git add, error: %s", err)
-	}
-
-	if err := git.Commit(fmt.Sprintf("v%s", config.Release.Version)); err != nil {
-		log.Fatalf("Failed to git commit, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("=> Merging changes into release branch...")
-	if err := git.CheckoutBranch(config.Release.ReleaseBranch); err != nil {
-		log.Fatalf("Failed to git checkout, error: %s", err)
-	}
-
-	mergeCommitMessage := fmt.Sprintf("Merge %s into %s, release: v%s", config.Release.DevelopmentBranch, config.Release.ReleaseBranch, config.Release.Version)
-	if err := git.Merge(config.Release.DevelopmentBranch, mergeCommitMessage); err != nil {
-		log.Fatalf("Failed to git merge, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("=> Tagging release branch...")
-	if err := git.Tag(config.Release.Version); err != nil {
-		log.Fatalf("Failed to git tag, error: %s", err)
-	}
-
-	if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
-		log.Fatalf("Failed to git checkout, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infoln(colorstring.Greenf("v%s released 🚀", config.Release.Version))
-	log.Infoln("Take a look at your git, and if you are happy with the release, push the changes.")
+	log.Infoln(colorstring.Greenf("v%s Changelog created (%s) 🚀", config.Release.Version, config.Changelog.Path))
 }

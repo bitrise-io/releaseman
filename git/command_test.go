@@ -53,17 +53,17 @@ func TestSplitByNewLineAndStrip(t *testing.T) {
 
 func TestStrip(t *testing.T) {
 	str := "test case"
-	require.Equal(t, "test case", strip(str))
+	require.Equal(t, "test case", Strip(str))
 
 	str = " test case"
-	require.Equal(t, "test case", strip(str))
+	require.Equal(t, "test case", Strip(str))
 
 	str = "test case "
-	require.Equal(t, "test case", strip(str))
+	require.Equal(t, "test case", Strip(str))
 
 	str = "   test case   "
-	require.Equal(t, "test case", strip(str))
+	require.Equal(t, "test case", Strip(str))
 
 	str = ""
-	require.Equal(t, "", strip(str))
+	require.Equal(t, "", Strip(str))
 }

@@ -1,11 +1,9 @@
 package cli
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"strings"
-	"text/template"
+
+	"gopkg.in/yaml.v2"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -81,42 +79,12 @@ func initRelease(c *cli.Context) {
 	// Print config
 	releaseConfig.Print(releaseman.FullMode)
 
-	tmpl, err := template.New("config").Parse(releaseman.ReleaseConfigTemplate)
+	bytes, err := yaml.Marshal(releaseConfig)
 	if err != nil {
-		log.Fatalf("Failed to parse template, error: %#v", err)
+		log.Fatalf("Failed to marshal config, error: %#v", err)
 	}
 
-	var releaseConfigBytes bytes.Buffer
-	err = tmpl.Execute(&releaseConfigBytes, releaseConfig)
-	if err != nil {
-		log.Fatalf("Failed to execute template, error: %#v", err)
-	}
-
-	scanner := bufio.NewScanner(&releaseConfigBytes)
-
-	fixed := ""
-	itemTemplateStart := false
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.Contains(line, "  item_template: |") {
-			itemTemplateStart = true
-		} else {
-			if itemTemplateStart {
-				if !strings.HasPrefix(line, "    ") {
-					line = fmt.Sprintf("    %s", line)
-				}
-			}
-		}
-
-		if fixed == "" {
-			fixed = line
-		} else {
-			fixed = fmt.Sprintf("%s\n%s", fixed, line)
-		}
-	}
-
-	if err := fileutil.WriteStringToFile(releaseman.DefaultConfigPth, fixed); err != nil {
+	if err := fileutil.WriteBytesToFile(releaseman.DefaultConfigPth, bytes); err != nil {
 		log.Fatalf("Failed to write config to file, error: %#v", err)
 	}
 }

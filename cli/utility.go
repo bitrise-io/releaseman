@@ -3,6 +3,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -10,7 +12,64 @@ import (
 	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
+	"github.com/hashicorp/go-version"
 )
+
+//=======================================
+// Utility
+//=======================================
+
+func runSetVersionScript(script, nextVersion string) error {
+	parts := strings.Fields(script)
+	head := parts[0]
+	parts = parts[1:len(parts)]
+
+	envs := os.Environ()
+	envs = append(envs, fmt.Sprintf("next_version=%s", nextVersion))
+
+	cmd := exec.Command(head, parts...)
+	cmd.Env = envs
+	outBytes, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Failed to run set version script, out: %s, error: %#v", string(outBytes), err)
+	}
+	return nil
+}
+
+func bumpedVersion(versionStr string, segmentIdx int) (string, error) {
+	version, err := version.NewVersion(versionStr)
+	if err != nil {
+		return "", err
+	}
+	if len(version.Segments()) < segmentIdx-1 {
+		return "", fmt.Errorf("Version segments length (%d), increment segemnt at idx (%d)", len(version.Segments()), segmentIdx)
+	}
+	version.Segments()[segmentIdx] = version.Segments()[segmentIdx] + 1
+	return version.String(), nil
+}
+
+func validateVersion(versionStr string) error {
+	_, err := version.NewVersion(versionStr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func versionSegmentIdx(segmentStr string) (int, error) {
+	segmentIdx := 0
+	switch segmentStr {
+	case PatchKey:
+		segmentIdx = 2
+	case MinorKey:
+		segmentIdx = 1
+	case MajorKey:
+		segmentIdx = 0
+	default:
+		return -1, fmt.Errorf("Invalid segment name (%s)", segmentStr)
+	}
+	return segmentIdx, nil
+}
 
 //=======================================
 // Ask for user input
@@ -57,7 +116,7 @@ func askForReleaseBranch() (string, error) {
 
 func askForReleaseVersion() (string, error) {
 	fmt.Println()
-	return goinp.AskForString("Type in release version!")
+	return goinp.AskForString("Type in the new release version!")
 }
 
 func askForChangelogPath() (string, error) {
@@ -121,21 +180,6 @@ func fillReleaseBranch(config releaseman.Config, c *cli.Context) (releaseman.Con
 	return config, nil
 }
 
-func versionSegmentIdx(segmentStr string) (int, error) {
-	segmentIdx := 0
-	switch segmentStr {
-	case PatchKey:
-		segmentIdx = 2
-	case MinorKey:
-		segmentIdx = 1
-	case MajorKey:
-		segmentIdx = 0
-	default:
-		return -1, fmt.Errorf("Invalid segment name (%s)", segmentStr)
-	}
-	return segmentIdx, nil
-}
-
 func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
@@ -144,18 +188,40 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		return releaseman.Config{}, err
 	}
 
+	currentVersion := ""
+	if c.IsSet(GetVersionScriptKey) {
+		log.Infof("Get version script provided")
+		versionScript := c.String(GetVersionScriptKey)
+		parts := strings.Fields(versionScript)
+		head := parts[0]
+		parts = parts[1:len(parts)]
+
+		outBytes, err := exec.Command(head, parts...).CombinedOutput()
+		if err != nil {
+			return releaseman.Config{}, fmt.Errorf("Failed to run bump script, out: %s, error: %#v", string(outBytes), err)
+		}
+		versionStr := string(outBytes)
+		versionStr = git.Strip(versionStr)
+
+		currentVersion = versionStr
+
+		log.Infof("currentVersion: %s", currentVersion)
+	} else if len(tags) != 0 {
+		currentVersion = tags[len(tags)-1].Tag
+	}
+
 	if c.IsSet(BumpVersionKey) {
-		if len(tags) == 0 {
-			return releaseman.Config{}, errors.New("There are no tags, nothing to bump")
+		log.Infof("Also bump version")
+		if currentVersion == "" {
+			return releaseman.Config{}, errors.New("Current version not found, nothing to bump")
 		}
 
 		segmentIdx, err := versionSegmentIdx(c.String(BumpVersionKey))
 		if err != nil {
 			return releaseman.Config{}, err
 		}
-		lastVersion := tags[len(tags)-1].Tag
 
-		config.Release.Version, err = releaseman.BumpedVersion(lastVersion, segmentIdx)
+		config.Release.Version, err = bumpedVersion(currentVersion, segmentIdx)
 		if err != nil {
 			return releaseman.Config{}, err
 		}
@@ -189,6 +255,10 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 
 	if config.Release.Version == "" {
 		return releaseman.Config{}, errors.New("Missing required input: release version")
+	}
+
+	if err := validateVersion(config.Release.Version); err != nil {
+		return releaseman.Config{}, err
 	}
 
 	return config, nil
