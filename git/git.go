@@ -92,7 +92,7 @@ func TaggedCommits() ([]CommitModel, error) {
 			return []CommitModel{}, err
 		}
 
-		commit, err := parseCommit(strip(out))
+		commit, err := parseCommit(Strip(out))
 		if err != nil {
 			return []CommitModel{}, fmt.Errorf("Failed to parse commit: %#v", err)
 		}
@@ -109,7 +109,7 @@ func CurrentBranchName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strip(out), nil
+	return Strip(out), nil
 }
 
 // AreUncommitedChanges ...
@@ -135,7 +135,7 @@ func FirstCommit() (CommitModel, error) {
 	if err != nil {
 		return CommitModel{}, err
 	}
-	commit, err := parseCommit(strip(out))
+	commit, err := parseCommit(Strip(out))
 	if err != nil {
 		return CommitModel{}, fmt.Errorf("Failed to parse commit: %#v", err)
 	}
@@ -148,7 +148,7 @@ func LatestCommit() (CommitModel, error) {
 	if err != nil {
 		return CommitModel{}, err
 	}
-	commit, err := parseCommit(strip(out))
+	commit, err := parseCommit(Strip(out))
 	if err != nil {
 		return CommitModel{}, fmt.Errorf("Failed to parse commit: %#v", err)
 	}

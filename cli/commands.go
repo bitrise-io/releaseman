@@ -45,6 +45,9 @@ const (
 	MinorKey = "minor"
 	// MajorKey ...
 	MajorKey = "major"
+
+	// BumpVersionScriptKey ...
+	BumpVersionScriptKey = "bump-version-script"
 )
 
 var (
@@ -72,6 +75,10 @@ var (
 					Usage: "Bump version (options: patch, minor, major).",
 				},
 				cli.StringFlag{
+					Name:  BumpVersionScriptKey,
+					Usage: "Bump version script.",
+				},
+				cli.StringFlag{
 					Name:  ChangelogPathKey,
 					Usage: "Change log path",
 				},
@@ -94,6 +101,10 @@ var (
 					Name:  BumpVersionKey,
 					Value: "patch",
 					Usage: "Bump version (options: patch, minor, major).",
+				},
+				cli.StringFlag{
+					Name:  BumpVersionScriptKey,
+					Usage: "Bump version script.",
 				},
 				cli.StringFlag{
 					Name:  ChangelogPathKey,

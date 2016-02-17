@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -10,7 +11,47 @@ import (
 	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
+	"github.com/hashicorp/go-version"
 )
+
+//=======================================
+// Utility
+//=======================================
+
+func bumpedVersion(versionStr string, segmentIdx int) (string, error) {
+	version, err := version.NewVersion(versionStr)
+	if err != nil {
+		return "", err
+	}
+	if len(version.Segments()) < segmentIdx-1 {
+		return "", fmt.Errorf("Version segments length (%d), increment segemnt at idx (%d)", len(version.Segments()), segmentIdx)
+	}
+	version.Segments()[segmentIdx] = version.Segments()[segmentIdx] + 1
+	return version.String(), nil
+}
+
+func validateVersion(versionStr string) error {
+	_, err := version.NewVersion(versionStr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func versionSegmentIdx(segmentStr string) (int, error) {
+	segmentIdx := 0
+	switch segmentStr {
+	case PatchKey:
+		segmentIdx = 2
+	case MinorKey:
+		segmentIdx = 1
+	case MajorKey:
+		segmentIdx = 0
+	default:
+		return -1, fmt.Errorf("Invalid segment name (%s)", segmentStr)
+	}
+	return segmentIdx, nil
+}
 
 //=======================================
 // Ask for user input
@@ -121,21 +162,6 @@ func fillReleaseBranch(config releaseman.Config, c *cli.Context) (releaseman.Con
 	return config, nil
 }
 
-func versionSegmentIdx(segmentStr string) (int, error) {
-	segmentIdx := 0
-	switch segmentStr {
-	case PatchKey:
-		segmentIdx = 2
-	case MinorKey:
-		segmentIdx = 1
-	case MajorKey:
-		segmentIdx = 0
-	default:
-		return -1, fmt.Errorf("Invalid segment name (%s)", segmentStr)
-	}
-	return segmentIdx, nil
-}
-
 func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
@@ -144,7 +170,21 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		return releaseman.Config{}, err
 	}
 
-	if c.IsSet(BumpVersionKey) {
+	if c.IsSet(BumpVersionScriptKey) {
+		bumpVersionScript := c.String(BumpVersionScriptKey)
+		parts := strings.Fields(bumpVersionScript)
+		head := parts[0]
+		parts = parts[1:len(parts)]
+
+		outBytes, err := exec.Command(head, parts...).CombinedOutput()
+		if err != nil {
+			return releaseman.Config{}, fmt.Errorf("Failed to run bump script, out: %s, error: %#v", string(outBytes), err)
+		}
+		version := string(outBytes)
+		version = git.Strip(version)
+
+		config.Release.Version = version
+	} else if c.IsSet(BumpVersionKey) {
 		if len(tags) == 0 {
 			return releaseman.Config{}, errors.New("There are no tags, nothing to bump")
 		}
@@ -155,7 +195,7 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		}
 		lastVersion := tags[len(tags)-1].Tag
 
-		config.Release.Version, err = releaseman.BumpedVersion(lastVersion, segmentIdx)
+		config.Release.Version, err = bumpedVersion(lastVersion, segmentIdx)
 		if err != nil {
 			return releaseman.Config{}, err
 		}
@@ -189,6 +229,10 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 
 	if config.Release.Version == "" {
 		return releaseman.Config{}, errors.New("Missing required input: release version")
+	}
+
+	if err := validateVersion(config.Release.Version); err != nil {
+		return releaseman.Config{}, err
 	}
 
 	return config, nil

@@ -2,14 +2,12 @@ package releaseman
 
 import (
 	"bytes"
-	"fmt"
 	"text/template"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-tools/releaseman/git"
-	version "github.com/hashicorp/go-version"
 )
 
 //=======================================
@@ -141,19 +139,6 @@ func generateChangelog(commits, taggedCommits []git.CommitModel, version string)
 //=======================================
 // Main
 //=======================================
-
-// BumpedVersion ...
-func BumpedVersion(versionStr string, segmentIdx int) (string, error) {
-	version, err := version.NewVersion(versionStr)
-	if err != nil {
-		return "", err
-	}
-	if len(version.Segments()) < segmentIdx-1 {
-		return "", fmt.Errorf("Version segments length (%d), increment segemnt at idx (%d)", len(version.Segments()), segmentIdx)
-	}
-	version.Segments()[segmentIdx] = version.Segments()[segmentIdx] + 1
-	return version.String(), nil
-}
 
 // WriteChangelog ...
 func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, append bool) error {
