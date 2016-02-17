@@ -3,8 +3,8 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 app:
   envs:
-  - BITRISE_BIN_NAME: releaseman
-  - GITHUB_RELEASES_URL: https://github.com/bitrise-tools/${BITRISE_BIN_NAME}/releases
+  - BIN_NAME: releaseman
+  - GITHUB_RELEASES_URL: https://github.com/bitrise-tools/${BIN_NAME}/releases
 
 workflows:
 
@@ -100,8 +100,8 @@ workflows:
         inputs:
         - webhook_url: $INTERNAL_DEV_SLACK_WEBHOOK_URL
         - channel: $INTERNAL_DEV_SLACK_CHANNEL
-        - from_username: ${BITRISE_BIN_NAME} - CI - OK
-        - from_username_on_error: ${BITRISE_BIN_NAME} - CI - ERROR
+        - from_username: ${BIN_NAME} - CI - OK
+        - from_username_on_error: ${BIN_NAME} - CI - ERROR
         - emoji: ":white_check_mark:"
         - emoji_on_error: ":no_entry_sign:"
         - message: |-
@@ -114,18 +114,37 @@ workflows:
             Build URL: ${BITRISE_BUILD_URL}
 
   create-release:
-    # before_run:
-    # - _test
+    before_run:
+    - _test
     steps:
     - script:
         title:
         inputs:
         - content: |
+            #!/bin/bash
+
+            # Draft new release
             export CI=true
             releaseman create-changelog \
               --get-version-script "go run _scripts/get_version.go -file version/version.go" \
               --bump-version patch \
               --set-version-script "bash _scripts/set_version.sh version/version.go"
+
+            # Create bins
+            rm -rf ./_bin/tmp-bins/
+
+            export ARCH=x86_64
+            export GOARCH=amd64
+
+            export OS=Darwin
+            export GOOS=darwin
+            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
+            go build -o "$deploy_pth"
+
+            export OS=Linux
+            export GOOS=linux
+            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
+            go build -o "$deploy_pth"
 
   # create-release:
   #   before_run:
@@ -145,7 +164,7 @@ workflows:
   #           binversion="$(_bin/tmpbin -version)"
   #           echo "binversion: ${binversion}"
   #           mkdir -p _bin/${binversion}
-  #           finalpth=_bin/${binversion}/${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
+  #           finalpth=_bin/${binversion}/${BIN_NAME}-$(uname -s)-$(uname -m)
   #           echo "finalpth: ${finalpth}"
   #           mv _bin/tmpbin "${finalpth}"
   #           # register the version for next steps
