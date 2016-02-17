@@ -110,7 +110,7 @@ func createChangelog(c *cli.Context) {
 		log.Fatalf("Failed to get latest commit, error: %#v", err)
 	}
 
-	taggedCommits, err := git.TaggedCommits()
+	taggedCommits, err := git.VersionTaggedCommits()
 	if err != nil {
 		log.Fatalf("Failed to get tagged commits, error: %#v", err)
 	}

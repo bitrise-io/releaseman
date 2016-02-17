@@ -183,7 +183,7 @@ func fillReleaseBranch(config releaseman.Config, c *cli.Context) (releaseman.Con
 func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
-	tags, err := git.TaggedCommits()
+	tags, err := git.VersionTaggedCommits()
 	if err != nil {
 		return releaseman.Config{}, err
 	}
