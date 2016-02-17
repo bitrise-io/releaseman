@@ -125,7 +125,7 @@ workflows:
 
             # Draft new release
             export CI=true
-            releaseman create-changelog \
+            releaseman create \
               --get-version-script "go run _scripts/get_version.go -file version/version.go" \
               --bump-version patch \
               --set-version-script "bash _scripts/set_version.sh version/version.go"
