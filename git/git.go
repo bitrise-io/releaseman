@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -124,14 +125,23 @@ func AreUncommitedChanges() (bool, error) {
 
 // GetChangedFiles ...
 func GetChangedFiles() ([]string, error) {
-	out, err := NewPrintableCommand("git", "diff", "--name-only").Run()
+	out, err := NewPrintableCommand("git", "status", "--porcelain").Run()
 	if err != nil {
 		return []string{}, err
 	}
 
+	changes := []string{}
 	changeList := splitByNewLineAndStrip(out)
+	for _, change := range changeList {
+		changeSplits := strings.Split(change, " ")
 
-	return changeList, nil
+		normalizedChangeSplits := changeSplits[1:len(changeSplits)]
+		normalizedChangeStr := strings.Join(normalizedChangeSplits, " ")
+
+		changes = append(changes, normalizedChangeStr)
+	}
+
+	return changes, nil
 }
 
 // CheckoutBranch ...
