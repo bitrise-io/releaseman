@@ -110,6 +110,7 @@ func CurrentBranchName() (string, error) {
 		return "", err
 	}
 	return Strip(out), nil
+
 }
 
 // AreUncommitedChanges ...
@@ -119,6 +120,18 @@ func AreUncommitedChanges() (bool, error) {
 		return false, err
 	}
 	return (out != ""), nil
+}
+
+// GetChangedFiles ...
+func GetChangedFiles() ([]string, error) {
+	out, err := NewPrintableCommand("git", "diff", "--name-only").Run()
+	if err != nil {
+		return []string{}, err
+	}
+
+	changeList := splitByNewLineAndStrip(out)
+
+	return changeList, nil
 }
 
 // CheckoutBranch ...
