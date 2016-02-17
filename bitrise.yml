@@ -3,7 +3,7 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 app:
   envs:
-  - BITRISE_BIN_NAME: codesigndoc
+  - BITRISE_BIN_NAME: releaseman
   - GITHUB_RELEASES_URL: https://github.com/bitrise-tools/${BITRISE_BIN_NAME}/releases
 
 workflows:
@@ -118,35 +118,46 @@ workflows:
     - _test
     steps:
     - script:
-        title: Creating deploy
+        title:
         inputs:
-        - content: |-
-            #!/bin/bash
-            set -v
-            set -e
-            if [ -f _bin/tmpbin ] ; then
-              rm _bin/tmpbin
-            fi
-            go build -o _bin/tmpbin
-            binversion="$(_bin/tmpbin -version)"
-            echo "binversion: ${binversion}"
-            mkdir -p _bin/${binversion}
-            finalpth=_bin/${binversion}/${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
-            echo "finalpth: ${finalpth}"
-            mv _bin/tmpbin "${finalpth}"
-            # register the version for next steps
-            envman add --key RELEASE_VERSION --value "${binversion}"
-    - script:
-        title: Creating release install_wrap
-        inputs:
-        - content: |-
-            template_path = "./_scripts/install_wrap.sh.template"
-            puts " * template_path: #{template_path}"
-            target_path = "./_scripts/install_wrap.sh"
-            puts " * target_path: #{target_path}"
-            template_content = File.read(template_path)
-            final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
-            File.open(target_path, "w") do |f|
-              f.write(final_content)
-            end
-        - runner_bin: ruby
+        - content: |
+            # export CI=true
+            releaseman create --bump-version-script "go run _scripts/bump_version.go -file version/version.go -segment 2"
+
+  # create-release:
+  #   before_run:
+  #   - _test
+  #   steps:
+  #   - script:
+  #       title: Creating deploy
+  #       inputs:
+  #       - content: |-
+  #           #!/bin/bash
+  #           set -v
+  #           set -e
+  #           if [ -f _bin/tmpbin ] ; then
+  #             rm _bin/tmpbin
+  #           fi
+  #           go build -o _bin/tmpbin
+  #           binversion="$(_bin/tmpbin -version)"
+  #           echo "binversion: ${binversion}"
+  #           mkdir -p _bin/${binversion}
+  #           finalpth=_bin/${binversion}/${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
+  #           echo "finalpth: ${finalpth}"
+  #           mv _bin/tmpbin "${finalpth}"
+  #           # register the version for next steps
+  #           envman add --key RELEASE_VERSION --value "${binversion}"
+  #   - script:
+  #       title: Creating release install_wrap
+  #       inputs:
+  #       - content: |-
+  #           template_path = "./_scripts/install_wrap.sh.template"
+  #           puts " * template_path: #{template_path}"
+  #           target_path = "./_scripts/install_wrap.sh"
+  #           puts " * target_path: #{target_path}"
+  #           template_content = File.read(template_path)
+  #           final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
+  #           File.open(target_path, "w") do |f|
+  #             f.write(final_content)
+  #           end
+  #       - runner_bin: ruby
