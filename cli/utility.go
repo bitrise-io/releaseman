@@ -210,6 +210,18 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		currentVersion = tags[len(tags)-1].Tag
 	}
 
+	if currentVersion != "" {
+		segmentIdx, err := versionSegmentIdx(PatchKey)
+		if err != nil {
+			return releaseman.Config{}, err
+		}
+
+		config.Release.Version, err = bumpedVersion(currentVersion, segmentIdx)
+		if err != nil {
+			return releaseman.Config{}, err
+		}
+	}
+
 	if c.IsSet(BumpVersionKey) {
 		log.Infof("Also bump version")
 		if currentVersion == "" {
