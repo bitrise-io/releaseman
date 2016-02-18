@@ -9,6 +9,13 @@ import (
 	version "github.com/hashicorp/go-version"
 )
 
+const (
+	hashPrefix    = "commit: "
+	datePrefix    = "date: "
+	authorPrefix  = "author: "
+	messagePrefix = "message: "
+)
+
 //=======================================
 // Models
 //=======================================
@@ -39,25 +46,64 @@ func parseDate(unixTimeStampStr string) (time.Time, error) {
 	return tm, nil
 }
 
+func parseCommitList(commitListStr string) ([]CommitModel, error) {
+	commits := []CommitModel{}
+
+	commitLine := ""
+
+	commitStart := false
+
+	commitListSplit := strings.Split(commitListStr, "\n")
+	for _, line := range commitListSplit {
+		if strings.HasPrefix(line, hashPrefix) {
+			commitStart = true
+		}
+
+		if commitStart {
+			if commitLine != "" {
+				commit, err := parseCommit(commitLine)
+				if err != nil {
+					return []CommitModel{}, err
+				}
+
+				commits = append(commits, commit)
+			}
+
+			commitStart = false
+			commitLine = ""
+		}
+
+		if commitLine == "" {
+			commitLine = line
+		} else {
+			commitLine += fmt.Sprintf("\n%s", line)
+		}
+	}
+
+	return commits, nil
+}
+
 func parseCommit(commitLineStr string) (CommitModel, error) {
 	// commit b738dee2d32def019a4d553249004364046dc1bd
 	// commit: b738dee2d32def019a4d553249004364046dc1bd
 	// date: 1455631980
 	// author: Viktor Benei
 	// message: Merge branch 'master' of github.com:bitrise-tools/releaseman
-	hashPrefix := "commit: "
-	datePrefix := "date: "
-	authorPrefix := "author: "
-	messagePrefix := "message: "
 
+	/*
+		commit: 7d3243a6e91aa46f28ed3811bb4bc26a05ce0b02
+		date: 1455788198
+		author: Krisztián Gödrei
+		message: FIX: parsing git commits
+	*/
 	hash := ""
 	dateStr := ""
 	author := ""
 	message := ""
 
 	commitSplits := splitByNewLineAndStrip(commitLineStr)
-	if len(commitSplits) < 5 {
-		return CommitModel{}, fmt.Errorf("Failed to parse commit: (%s)", commitLineStr)
+	if len(commitSplits) < 4 {
+		return CommitModel{}, fmt.Errorf("(%s), error: <4 parts", commitLineStr)
 	}
 
 	messageStart := false
@@ -82,7 +128,7 @@ func parseCommit(commitLineStr string) (CommitModel, error) {
 	}
 
 	if hash == "" || dateStr == "" || author == "" {
-		return CommitModel{}, fmt.Errorf("Failed to parse commit: (%s)", commitLineStr)
+		return CommitModel{}, fmt.Errorf("(%s), error: some required fields are missing", commitLineStr)
 	}
 
 	date, err := parseDate(dateStr)
@@ -235,30 +281,30 @@ func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
 	if err != nil {
 		return []CommitModel{}, err
 	}
-	commitList := splitByNewLineAndStrip(out)
 
-	commits := []CommitModel{}
+	commits, err := parseCommitList(out)
+	if err != nil {
+		return []CommitModel{}, err
+	}
+
+	relevantCommits := []CommitModel{}
 	isRelevantCommit := false
 
-	for _, commitListItem := range commitList {
-		commit, err := parseCommit(commitListItem)
-		if err != nil {
-			return []CommitModel{}, fmt.Errorf("Failed to parse commit, error: %#v", err)
-		}
-
+	for _, commit := range commits {
 		if !isRelevantCommit && startDate.Sub(commit.Date) <= 0 {
 			isRelevantCommit = true
 		}
 
 		if isRelevantCommit {
-			commits = append(commits, commit)
+			relevantCommits = append(relevantCommits, commit)
 		}
 
 		if isRelevantCommit && endDate.Sub(commit.Date) <= 0 {
 			break
 		}
 	}
-	return commits, nil
+
+	return relevantCommits, nil
 }
 
 // Add ...

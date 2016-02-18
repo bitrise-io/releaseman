@@ -15,10 +15,6 @@ import (
 const (
 	// DefaultConfigPth ...
 	DefaultConfigPth = "./release_config.yml"
-	//InitialCommitStr ...
-	InitialCommitStr = "initial commit"
-	// CurrentStateStr ...
-	CurrentStateStr = "current state"
 )
 
 var (
@@ -39,8 +35,10 @@ type Release struct {
 
 // Changelog ...
 type Changelog struct {
-	Path         string `yaml:"path"`
-	ItemTemplate string `yaml:"item_template"`
+	Path            string `yaml:"path"`
+	ContentTemplate string `yaml:"content_template"`
+	HeaderTemplate  string `yaml:"header_template"`
+	FooterTemplate  string `yaml:"footer_template"`
 }
 
 // Config ...

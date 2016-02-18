@@ -73,7 +73,9 @@ func initRelease(c *cli.Context) {
 	if err != nil {
 		log.Fatalf("Failed to collect config params, error: %#v", err)
 	}
-	releaseConfig.Changelog.ItemTemplate = releaseman.ChangelogTemplate
+	releaseConfig.Changelog.ContentTemplate = releaseman.ChangelogContentTemplate
+	releaseConfig.Changelog.HeaderTemplate = releaseman.ChangelogHeaderTemplate
+	releaseConfig.Changelog.FooterTemplate = releaseman.ChangelogFooterTemplate
 
 	//
 	// Print config
