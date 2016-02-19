@@ -80,7 +80,7 @@ func createChangelog(c *cli.Context) {
 	config.Print(releaseman.ChangelogMode)
 
 	if !releaseman.IsCIMode {
-		ok, err := goinp.AskForBool("Are you ready for creating Changelog?")
+		ok, err := goinp.AskForBoolWithDefault("Are you ready for creating Changelog?", true)
 		if err != nil {
 			log.Fatalf("Failed to ask for input, error: %s", err)
 		}

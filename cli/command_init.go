@@ -60,7 +60,7 @@ func initRelease(c *cli.Context) {
 		if releaseman.IsCIMode {
 			log.Fatalf("Release config already exist at (%s)", releaseman.DefaultConfigPth)
 		} else {
-			ok, err := goinp.AskForBool(fmt.Sprintf("Release config already exist at (%s), would you like to overwrite it?", releaseman.DefaultConfigPth))
+			ok, err := goinp.AskForBoolWithDefault(fmt.Sprintf("Release config already exist at (%s), would you like to overwrite it?", releaseman.DefaultConfigPth), true)
 			if err != nil {
 				log.Fatalf("Failed to ask for bool, error: %#v", err)
 			} else if !ok {

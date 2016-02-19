@@ -94,7 +94,7 @@ func create(c *cli.Context) {
 	config.Print(releaseman.FullMode)
 
 	if !releaseman.IsCIMode {
-		ok, err := goinp.AskForBool("Are you ready for release?")
+		ok, err := goinp.AskForBoolWithDefault("Are you ready for release?", true)
 		if err != nil {
 			log.Fatalf("Failed to ask for input, error: %s", err)
 		}
