@@ -7,8 +7,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.9.0-3-g3455d89",
-			"Rev": "3455d89ac9652295c85db2a98ea32f1d61c380bc"
+			"Comment": "v0.9.0-8-g57cce1e",
+			"Rev": "57cce1ed6103dce7791881d3e69e55f90d986aa5"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/cmdex",
@@ -28,12 +28,12 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/goinp/goinp",
-			"Rev": "4107565279986f05ccd88626b67a63747d41ee8d"
+			"Rev": "af80680f5c8d508810be1ca5b757e236bb139466"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-215-g0ab42fd",
-			"Rev": "0ab42fd482c27cf2c95e7794ad3bb2082c2ab2d7"
+			"Comment": "1.2.0-217-g5db7419",
+			"Rev": "5db74198dee1cfe60cf06a611d03a420361baad6"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",

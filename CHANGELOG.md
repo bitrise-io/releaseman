@@ -1,4 +1,19 @@
-### 0.0.4 (2016 Feb 17)
+## Changelog (Current version: 0.9.0)
+
+-----------------
+
+###0.9.0 (2016 Feb 19)
+
+* [593e250] default values at user inputs
+* [fd2ecac] bump last version's patch part by default
+* [8e19279] NEW: changelog header and footer support
+* [a7c5ee6] FIX: parsing git commits
+* [43b951d] FIX: omit not sem-ver git tags
+* [972874b] FIX: instead of function name trimm  -> firstChars
+* [c70a0de] Merge develop into master, release: v0.0.4
+* [8e784af] v0.0.4
+
+###0.0.4 (2016 Feb 17)
 
 * [df4e2db] set current version to 0.0.3
 * [c3abd06] temp rollback
@@ -24,7 +39,7 @@
 * [f782255] ver 0.0.3
 * [b738dee] Merge branch 'master' of github.com:bitrise-tools/releaseman
 
-### 0.0.3 (2016 Feb 16)
+###0.0.3 (2016 Feb 16)
 
 * [35d931f] Merge pull request #3 from godrei/master
 * [7f75607] Merge branch 'develop'
@@ -41,7 +56,7 @@
 * [9ac525c] revisions: CHANGELOG.md moved; version separated into a version package; fixed pathutil package links
 * [e97a9d7] Merge pull request #2 from godrei/master
 
-### 0.0.2 (2016 Feb 09)
+###0.0.2 (2016 Feb 09)
 
 * [a306ead] Merge develop into master, release: v0.0.2
 * [c1b132e] v0.0.2
@@ -65,3 +80,6 @@
 * [ba58d36] go tests added
 * [c9fe307] Merge pull request #1 from godrei/v0.0.1
 
+-----------------
+
+Updated: 2016 Feb 19

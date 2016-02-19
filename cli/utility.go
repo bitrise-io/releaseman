@@ -15,6 +15,11 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
+const (
+	defaultChangelogPath       = "CHANGELOG.md"
+	defaultFirstReleaseVersion = "0.0.1"
+)
+
 //=======================================
 // Utility
 //=======================================
@@ -81,17 +86,31 @@ func askForDevelopmentBranch() (string, error) {
 		return "", err
 	}
 
+	defaultBranchIdx := -1
+	for idx, branch := range branches {
+		if strings.HasPrefix(branch, "* ") {
+			defaultBranchIdx = idx
+		}
+	}
+
 	fmt.Println()
-	developmentBranch, err := goinp.SelectFromStrings("Select your development branch!", branches)
+	question := "Select your development branch!"
+
+	answer := ""
+	if defaultBranchIdx != -1 {
+		answer, err = goinp.SelectFromStringsWithDefault(question, defaultBranchIdx+1, branches)
+	} else {
+		answer, err = goinp.SelectFromStrings(question, branches)
+	}
 	if err != nil {
 		return "", err
 	}
 
 	// 'git branch --list' marks the current branch with (* )
-	if strings.HasPrefix(developmentBranch, "* ") {
-		developmentBranch = strings.TrimPrefix(developmentBranch, "* ")
+	if strings.HasPrefix(answer, "* ") {
+		answer = strings.TrimPrefix(answer, "* ")
 	}
-	return developmentBranch, nil
+	return answer, nil
 }
 
 func askForReleaseBranch() (string, error) {
@@ -100,33 +119,56 @@ func askForReleaseBranch() (string, error) {
 		return "", err
 	}
 
+	defaultBranchIdx := -1
+	for idx, branch := range branches {
+		if branch == "master" {
+			defaultBranchIdx = idx
+		}
+	}
+
 	fmt.Println()
-	releaseBranch, err := goinp.SelectFromStrings("Select your release branch!", branches)
+	question := "Select your release branch!"
+
+	answer := ""
+	if defaultBranchIdx != -1 {
+		answer, err = goinp.SelectFromStringsWithDefault(question, defaultBranchIdx+1, branches)
+	} else {
+		answer, err = goinp.SelectFromStrings(question, branches)
+	}
 	if err != nil {
 		return "", err
 	}
 
 	// 'git branch --list' marks the current branch with (* )
-	if strings.HasPrefix(releaseBranch, "* ") {
-		releaseBranch = strings.TrimPrefix(releaseBranch, "* ")
+	if strings.HasPrefix(answer, "* ") {
+		answer = strings.TrimPrefix(answer, "* ")
 	}
 
-	return releaseBranch, nil
+	return answer, nil
 }
 
 func askForReleaseVersion() (string, error) {
 	fmt.Println()
-	return goinp.AskForString("Type in the new release version!")
+	answer, err := goinp.AskForStringWithDefault("Type in the new release version!", defaultFirstReleaseVersion)
+	if err != nil {
+		return "", err
+	}
+	if answer == "" {
+		answer = defaultFirstReleaseVersion
+	}
+	return answer, nil
 }
 
 func askForChangelogPath() (string, error) {
 	fmt.Println()
-	return goinp.AskForString("Type in changelog path!")
-}
-
-func askForChangelogTemplatePath() (string, error) {
-	fmt.Println()
-	return goinp.AskForString("Type in changelog template path, or press enter to use default one!")
+	answer, err := goinp.AskForStringWithDefault("Type in changelog path!", defaultChangelogPath)
+	if err != nil {
+		return "", err
+	}
+	if answer == "" {
+		answer = defaultChangelogPath
+	}
+	return answer, nil
 }
 
 //=======================================
@@ -183,7 +225,7 @@ func fillReleaseBranch(config releaseman.Config, c *cli.Context) (releaseman.Con
 func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, error) {
 	var err error
 
-	tags, err := git.TaggedCommits()
+	tags, err := git.VersionTaggedCommits()
 	if err != nil {
 		return releaseman.Config{}, err
 	}
@@ -205,13 +247,25 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 
 		currentVersion = versionStr
 
-		log.Infof("currentVersion: %s", currentVersion)
-	} else if len(tags) != 0 {
+	} else if len(tags) > 0 {
 		currentVersion = tags[len(tags)-1].Tag
 	}
 
+	if currentVersion != "" {
+		log.Infof("Current version: %s", currentVersion)
+
+		segmentIdx, err := versionSegmentIdx(PatchKey)
+		if err != nil {
+			return releaseman.Config{}, err
+		}
+
+		config.Release.Version, err = bumpedVersion(currentVersion, segmentIdx)
+		if err != nil {
+			return releaseman.Config{}, err
+		}
+	}
+
 	if c.IsSet(BumpVersionKey) {
-		log.Infof("Also bump version")
 		if currentVersion == "" {
 			return releaseman.Config{}, errors.New("Current version not found, nothing to bump")
 		}
@@ -220,6 +274,8 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		if err != nil {
 			return releaseman.Config{}, err
 		}
+
+		log.Infof("Bumping version %s part", c.String(BumpVersionKey))
 
 		config.Release.Version, err = bumpedVersion(currentVersion, segmentIdx)
 		if err != nil {
@@ -315,7 +371,7 @@ func ensureCurrentBranch(config releaseman.Config) error {
 		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
 
 		fmt.Println()
-		checkout, err := goinp.AskForBool(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch))
+		checkout, err := goinp.AskForBoolWithDefault(fmt.Sprintf("Would you like to checkout development branch (%s)?", config.Release.DevelopmentBranch), true)
 		if err != nil {
 			return err
 		}

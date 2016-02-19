@@ -2,10 +2,18 @@ package git
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	version "github.com/hashicorp/go-version"
+)
+
+const (
+	hashPrefix    = "commit: "
+	datePrefix    = "date: "
+	authorPrefix  = "author: "
+	messagePrefix = "message: "
 )
 
 //=======================================
@@ -38,32 +46,102 @@ func parseDate(unixTimeStampStr string) (time.Time, error) {
 	return tm, nil
 }
 
-func parseCommit(commitLineStr string) (CommitModel, error) {
-	// 85d8658733f73ae6d5407e8e4c2b81a5f2ed016c 1454498673 (Krisztián Gödrei) first change
-	re := regexp.MustCompile(`(?P<hash>[0-9a-z]+) (?P<date>[0-9]+) \((?P<author>.*)\) (?P<message>.+)`)
-	results := re.FindAllStringSubmatch(commitLineStr, -1)
+func parseCommitList(commitListStr string) ([]CommitModel, error) {
+	commits := []CommitModel{}
 
-	for _, v := range results {
-		if v[1] == "" || v[2] == "" || v[4] == "" {
-			return CommitModel{}, fmt.Errorf("Failed to parse commit: %s", commitLineStr)
+	commitLine := ""
+
+	commitStart := false
+
+	commitListSplit := strings.Split(commitListStr, "\n")
+	for _, line := range commitListSplit {
+		if strings.HasPrefix(line, hashPrefix) {
+			commitStart = true
 		}
 
-		hash := v[1]
-		date, err := parseDate(v[2])
-		if err != nil {
-			return CommitModel{}, err
-		}
-		author := v[3]
-		message := v[4]
+		if commitStart {
+			if commitLine != "" {
+				commit, err := parseCommit(commitLine)
+				if err != nil {
+					return []CommitModel{}, err
+				}
 
-		return CommitModel{
-			Hash:    hash,
-			Message: message,
-			Date:    date,
-			Author:  author,
-		}, nil
+				commits = append(commits, commit)
+			}
+
+			commitStart = false
+			commitLine = ""
+		}
+
+		if commitLine == "" {
+			commitLine = line
+		} else {
+			commitLine += fmt.Sprintf("\n%s", line)
+		}
 	}
-	return CommitModel{}, fmt.Errorf("Failed to parse commit: %s", commitLineStr)
+
+	return commits, nil
+}
+
+func parseCommit(commitLineStr string) (CommitModel, error) {
+	// commit b738dee2d32def019a4d553249004364046dc1bd
+	// commit: b738dee2d32def019a4d553249004364046dc1bd
+	// date: 1455631980
+	// author: Viktor Benei
+	// message: Merge branch 'master' of github.com:bitrise-tools/releaseman
+
+	/*
+		commit: 7d3243a6e91aa46f28ed3811bb4bc26a05ce0b02
+		date: 1455788198
+		author: Krisztián Gödrei
+		message: FIX: parsing git commits
+	*/
+	hash := ""
+	dateStr := ""
+	author := ""
+	message := ""
+
+	commitSplits := splitByNewLineAndStrip(commitLineStr)
+	if len(commitSplits) < 4 {
+		return CommitModel{}, fmt.Errorf("(%s), error: <4 parts", commitLineStr)
+	}
+
+	messageStart := false
+	for _, line := range commitSplits {
+		if strings.HasPrefix(line, hashPrefix) {
+			hash = strings.TrimPrefix(line, hashPrefix)
+		} else if strings.HasPrefix(line, datePrefix) {
+			dateStr = strings.TrimPrefix(line, datePrefix)
+		} else if strings.HasPrefix(line, authorPrefix) {
+			author = strings.TrimPrefix(line, authorPrefix)
+		} else if strings.HasPrefix(line, messagePrefix) {
+			messageStart = true
+		}
+
+		if messageStart {
+			if strings.HasPrefix(line, messagePrefix) {
+				message += strings.TrimPrefix(line, messagePrefix)
+			} else {
+				message += fmt.Sprintf("\n%s", line)
+			}
+		}
+	}
+
+	if hash == "" || dateStr == "" || author == "" {
+		return CommitModel{}, fmt.Errorf("(%s), error: some required fields are missing", commitLineStr)
+	}
+
+	date, err := parseDate(dateStr)
+	if err != nil {
+		return CommitModel{}, err
+	}
+
+	return CommitModel{
+		Hash:    hash,
+		Message: message,
+		Date:    date,
+		Author:  author,
+	}, nil
 }
 
 //=======================================
@@ -79,8 +157,8 @@ func LocalBranches() ([]string, error) {
 	return splitByNewLineAndStrip(out), nil
 }
 
-// TaggedCommits ...
-func TaggedCommits() ([]CommitModel, error) {
+// VersionTaggedCommits ...
+func VersionTaggedCommits() ([]CommitModel, error) {
 	out, err := NewPrintableCommand("git", "tag", "--list").Run()
 	if err != nil {
 		return []CommitModel{}, err
@@ -88,7 +166,13 @@ func TaggedCommits() ([]CommitModel, error) {
 	taggedCommits := []CommitModel{}
 	tags := splitByNewLineAndStrip(out)
 	for _, tag := range tags {
-		out, err = NewPrintableCommand("git", "rev-list", "-n", "1", `--pretty=format:%H %ct (%an) %s`, tag).Run()
+		// is tag sem-ver tag?
+		_, err := version.NewVersion(tag)
+		if err != nil {
+			continue
+		}
+
+		out, err = NewPrintableCommand("git", "rev-list", "-n", "1", `--pretty=format:commit: %H%ndate: %ct%nauthor: %an%nmessage: %s`, tag).Run()
 		if err != nil {
 			return []CommitModel{}, err
 		}
@@ -154,7 +238,7 @@ func CheckoutBranch(branch string) error {
 
 // FirstCommit ...
 func FirstCommit() (CommitModel, error) {
-	out, err := NewPrintableCommand("git", "rev-list", "--max-parents=0", `--pretty=format:%H %ct (%an) %s`, "HEAD").Run()
+	out, err := NewPrintableCommand("git", "rev-list", "--max-parents=0", `--pretty=format:commit: %H%ndate: %ct%nauthor: %an%nmessage: %s`, "HEAD").Run()
 	if err != nil {
 		return CommitModel{}, err
 	}
@@ -167,7 +251,7 @@ func FirstCommit() (CommitModel, error) {
 
 // LatestCommit ...
 func LatestCommit() (CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", "-1", `--pretty=format:%H %ct (%an) %s`).Run()
+	out, err := NewPrintableCommand("git", "log", "-1", `--pretty=format:commit: %H%ndate: %ct%nauthor: %an%nmessage: %s`).Run()
 	if err != nil {
 		return CommitModel{}, err
 	}
@@ -193,34 +277,34 @@ func CommitOfTag(tag string) (CommitModel, error) {
 
 // GetCommitsBetween ...
 func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", `--pretty=format:%H %ct (%an) %s`, "--reverse").Run()
+	out, err := NewPrintableCommand("git", "log", `--pretty=format:commit: %H%ndate: %ct%nauthor: %an%nmessage: %s`, "--reverse").Run()
 	if err != nil {
 		return []CommitModel{}, err
 	}
-	commitList := splitByNewLineAndStrip(out)
 
-	commits := []CommitModel{}
+	commits, err := parseCommitList(out)
+	if err != nil {
+		return []CommitModel{}, err
+	}
+
+	relevantCommits := []CommitModel{}
 	isRelevantCommit := false
 
-	for _, commitListItem := range commitList {
-		commit, err := parseCommit(commitListItem)
-		if err != nil {
-			return []CommitModel{}, fmt.Errorf("Failed to parse commit, error: %#v", err)
-		}
-
+	for _, commit := range commits {
 		if !isRelevantCommit && startDate.Sub(commit.Date) <= 0 {
 			isRelevantCommit = true
 		}
 
 		if isRelevantCommit {
-			commits = append(commits, commit)
+			relevantCommits = append(relevantCommits, commit)
 		}
 
 		if isRelevantCommit && endDate.Sub(commit.Date) <= 0 {
 			break
 		}
 	}
-	return commits, nil
+
+	return relevantCommits, nil
 }
 
 // Add ...

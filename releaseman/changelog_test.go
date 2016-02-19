@@ -58,23 +58,23 @@ func TestCommitsBetween(t *testing.T) {
 }
 
 func TestReversedSections(t *testing.T) {
-	sections := []ChangelogSectionModel{}
+	sections := []ChangelogContentItemModel{}
 
 	reversed := reversedSections(sections)
 	require.Equal(t, 0, len(reversed))
 
-	sections = []ChangelogSectionModel{
-		ChangelogSectionModel{
+	sections = []ChangelogContentItemModel{
+		ChangelogContentItemModel{
 			StartTaggedCommit: git.CommitModel{
 				Tag: "1",
 			},
 		},
-		ChangelogSectionModel{
+		ChangelogContentItemModel{
 			StartTaggedCommit: git.CommitModel{
 				Tag: "2",
 			},
 		},
-		ChangelogSectionModel{
+		ChangelogContentItemModel{
 			StartTaggedCommit: git.CommitModel{
 				Tag: "3",
 			},
