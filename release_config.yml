@@ -4,7 +4,7 @@ release:
 changelog:
   path: CHANGELOG.md
   content_template: |-
-    {{range .ContentItems}}###{{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
+    {{range .ContentItems}}### {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 
     {{range .Commits}}* [{{firstChars .Hash 7}}] {{.Message}}
     {{end}}
