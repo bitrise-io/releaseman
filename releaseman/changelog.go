@@ -25,7 +25,7 @@ const ChangelogHeaderTemplate = `## Changelog (Current version: {{.Version}})`
 const ChangelogFooterTemplate = `Updated: {{.CurrentDate.Format "2006 Jan 02"}}`
 
 // ChangelogContentTemplate ...
-const ChangelogContentTemplate = `{{range .ContentItems}}### {{.StartTaggedCommit.Tag}} - {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
+const ChangelogContentTemplate = `{{range .ContentItems}}### {{.EndTaggedCommit.Tag}} - {{.StartTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
 
 {{range .Commits}}* [{{firstChars .Hash 7}}] {{.Author}} - {{.Message}} ({{.Date.Format "2006 Jan 02"}})
 {{end}}
@@ -68,11 +68,11 @@ func commitsBetween(startDate *time.Time, endDate *time.Time, commits []git.Comm
 	isRelevantCommit := false
 
 	for _, commit := range commits {
-		if !isRelevantCommit && (startDate == nil || (*startDate).Sub(commit.Date) <= 0) {
+		if !isRelevantCommit && (startDate == nil || (*startDate).Sub(commit.Date) < 0) {
 			isRelevantCommit = true
 		}
 
-		if isRelevantCommit && endDate != nil && (*endDate).Sub(commit.Date) <= 0 {
+		if isRelevantCommit && endDate != nil && (*endDate).Sub(commit.Date) < 0 {
 			return relevantCommits
 		}
 
@@ -229,7 +229,7 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 		log.Debug("Write changelog with header and footer template")
 
 		headerTemplate := template.New("changelog_header").Funcs(changelogTemplateFuncMap)
-		headerTemplate, err := headerTemplate.Parse(ChangelogHeaderTemplate)
+		headerTemplate, err := headerTemplate.Parse(config.Changelog.HeaderTemplate)
 		if err != nil {
 			log.Fatalf("Failed to parse header template, error: %#v", err)
 		}
@@ -246,7 +246,7 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 	// Footer
 	if config.Changelog.FooterTemplate != "" {
 		footerTemplate := template.New("changelog_footer").Funcs(changelogTemplateFuncMap)
-		footerTemplate, err := footerTemplate.Parse(ChangelogFooterTemplate)
+		footerTemplate, err := footerTemplate.Parse(config.Changelog.FooterTemplate)
 		if err != nil {
 			log.Fatalf("Failed to parse footer template, error: %#v", err)
 		}
@@ -285,8 +285,10 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 	newContentStr := newContentBytes.String()
 
 	newContentSplit := strings.Split(newContentStr, "\n")
-	newContentSplit = newContentSplit[0 : len(newContentSplit)-1]
-	newContentStr = strings.Join(newContentSplit, "\n")
+	if len(newContentSplit) > 0 {
+		newContentSplit = newContentSplit[0 : len(newContentSplit)-1]
+		newContentStr = strings.Join(newContentSplit, "\n")
+	}
 
 	log.Debug()
 	log.Debug("Content:")
@@ -321,7 +323,8 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 
 		log.Debug()
 		log.Debug("Merged content:")
-		for _, line := range strings.Split(contentStr, "\n") {
+		contentSplits := strings.Split(contentStr, "\n")
+		for _, line := range contentSplits {
 			log.Debug("%s", line)
 		}
 	} else {
