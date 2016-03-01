@@ -291,7 +291,7 @@ func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
 	isRelevantCommit := false
 
 	for _, commit := range commits {
-		if !isRelevantCommit && startDate.Sub(commit.Date) <= 0 {
+		if !isRelevantCommit && startDate.Sub(commit.Date) < 0 {
 			isRelevantCommit = true
 		}
 
@@ -299,7 +299,7 @@ func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
 			relevantCommits = append(relevantCommits, commit)
 		}
 
-		if isRelevantCommit && endDate.Sub(commit.Date) <= 0 {
+		if isRelevantCommit && endDate.Sub(commit.Date) < 0 {
 			break
 		}
 	}
