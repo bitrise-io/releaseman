@@ -121,7 +121,7 @@ func askForReleaseBranch() (string, error) {
 
 	defaultBranchIdx := -1
 	for idx, branch := range branches {
-		if branch == "master" {
+		if strings.Contains(branch, "master") {
 			defaultBranchIdx = idx
 		}
 	}
@@ -181,6 +181,7 @@ func fillDevelopmetnBranch(config releaseman.Config, c *cli.Context) (releaseman
 	if c.IsSet(DevelopmentBranchKey) {
 		config.Release.DevelopmentBranch = c.String(DevelopmentBranchKey)
 	}
+
 	if config.Release.DevelopmentBranch == "" {
 		if releaseman.IsCIMode {
 			return releaseman.Config{}, errors.New("Missing required input: development branch")
