@@ -2,6 +2,7 @@ package git
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,48 @@ type CommitModel struct {
 	Date    time.Time
 	Author  string
 	Tag     string
+}
+
+//=======================================
+// Sorting
+
+// SortByDate ...
+func SortByDate(commits []CommitModel) {
+	byDate := func(c1, c2 *CommitModel) bool {
+		return c1.Date.Before(c2.Date)
+	}
+
+	sortBy(byDate).sort(commits)
+}
+
+type sortBy func(p1, p2 *CommitModel) bool
+
+func (by sortBy) sort(commits []CommitModel) {
+	cs := &commitSorter{
+		commits: commits,
+		sortBy:  by,
+	}
+	sort.Sort(cs)
+}
+
+type commitSorter struct {
+	commits []CommitModel
+	sortBy  sortBy
+}
+
+//=======================================
+// sort.Interface
+
+func (s *commitSorter) Len() int {
+	return len(s.commits)
+}
+
+func (s *commitSorter) Swap(i, j int) {
+	s.commits[i], s.commits[j] = s.commits[j], s.commits[i]
+}
+
+func (s *commitSorter) Less(i, j int) bool {
+	return s.sortBy(&s.commits[i], &s.commits[j])
 }
 
 //=======================================
@@ -275,9 +318,9 @@ func CommitOfTag(tag string) (CommitModel, error) {
 	return commit, nil
 }
 
-// GetCommitsBetween ...
-func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
-	out, err := NewPrintableCommand("git", "log", `--pretty=format:commit: %H%ndate: %ct%nauthor: %an%nmessage: %s`, "--reverse").Run()
+// GetCommitsFrom ...
+func GetCommitsFrom(startCommitPtr *CommitModel) ([]CommitModel, error) {
+	out, err := NewPrintableCommand("git", "log", `--pretty=format:commit: %H%ndate: %ct%nauthor: %an%nmessage: %s`).Run()
 	if err != nil {
 		return []CommitModel{}, err
 	}
@@ -287,11 +330,22 @@ func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
 		return []CommitModel{}, err
 	}
 
+	SortByDate(commits)
+
 	relevantCommits := []CommitModel{}
 	isRelevantCommit := false
 
+	fmt.Println("")
+	fmt.Printf("GetCommitsFrom: %v\n", startCommitPtr)
+
 	for _, commit := range commits {
-		if !isRelevantCommit && startDate.Sub(commit.Date) <= 0 {
+		if !isRelevantCommit && startCommitPtr == nil {
+			fmt.Println("===> isRelevantCommit = true -- No start commit")
+			isRelevantCommit = true
+		}
+
+		if !isRelevantCommit && startCommitPtr != nil && (*startCommitPtr).Date.Sub(commit.Date) < 0 {
+			fmt.Println("===> isRelevantCommit = true")
 			isRelevantCommit = true
 		}
 
@@ -299,10 +353,10 @@ func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
 			relevantCommits = append(relevantCommits, commit)
 		}
 
-		if isRelevantCommit && endDate.Sub(commit.Date) <= 0 {
-			break
-		}
+		fmt.Printf("commit: %v\n", commit)
 	}
+
+	fmt.Println("")
 
 	return relevantCommits, nil
 }

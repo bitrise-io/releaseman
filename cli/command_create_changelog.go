@@ -46,6 +46,50 @@ func collectChangelogConfigParams(config releaseman.Config, c *cli.Context) (rel
 	return config, nil
 }
 
+func generateChangelog(config releaseman.Config) {
+	taggedCommits, err := git.VersionTaggedCommits()
+	if err != nil {
+		log.Fatalf("Failed to get tagged commits, error: %#v", err)
+	}
+
+	var startCommitPtr *git.CommitModel
+	if len(taggedCommits) > 0 {
+		startCommitPtr = &(taggedCommits[0])
+	}
+
+	relevantTags := taggedCommits
+
+	appendChangelog := false
+
+	if config.Changelog.Path != "" {
+		if exist, err := pathutil.IsPathExists(config.Changelog.Path); err != nil {
+			log.Fatalf("Failed to check if path exist, error: %#v", err)
+		} else if exist {
+			if len(taggedCommits) > 0 {
+				lastTaggedCommit := taggedCommits[len(taggedCommits)-1]
+
+				startCommitPtr = &lastTaggedCommit
+
+				relevantTags = []git.CommitModel{lastTaggedCommit}
+
+				appendChangelog = true
+			}
+		}
+	}
+
+	printCollectingCommits(startCommitPtr, config.Release.Version)
+
+	fmt.Println()
+	log.Infof("=> Generating Changelog...")
+	commits, err := git.GetCommitsFrom(startCommitPtr)
+	if err != nil {
+		log.Fatalf("Failed to get commits, error: %#v", err)
+	}
+	if err := releaseman.WriteChangelog(commits, relevantTags, config, appendChangelog); err != nil {
+		log.Fatalf("Failed to write Changelog, error: %#v", err)
+	}
+}
+
 //=======================================
 // Main
 //=======================================
@@ -100,51 +144,7 @@ func createChangelog(c *cli.Context) {
 
 	//
 	// Generate Changelog
-	startCommit, err := git.FirstCommit()
-	if err != nil {
-		log.Fatalf("Failed to get first commit, error: %#v", err)
-	}
-
-	endCommit, err := git.LatestCommit()
-	if err != nil {
-		log.Fatalf("Failed to get latest commit, error: %#v", err)
-	}
-
-	taggedCommits, err := git.VersionTaggedCommits()
-	if err != nil {
-		log.Fatalf("Failed to get tagged commits, error: %#v", err)
-	}
-
-	startDate := startCommit.Date
-	endDate := endCommit.Date
-	relevantTags := taggedCommits
-	appendChangelog := false
-
-	if config.Changelog.Path != "" {
-		if exist, err := pathutil.IsPathExists(config.Changelog.Path); err != nil {
-			log.Fatalf("Failed to check if path exist, error: %#v", err)
-		} else if exist {
-			if len(taggedCommits) > 0 {
-				lastTaggedCommit := taggedCommits[len(taggedCommits)-1]
-				startCommit = lastTaggedCommit
-				startDate = lastTaggedCommit.Date
-				relevantTags = []git.CommitModel{lastTaggedCommit}
-				appendChangelog = true
-			}
-		}
-	}
-
-	printCollectingCommits(startCommit, config.Release.Version)
-
-	fmt.Println()
-	log.Infof("=> Generating Changelog...")
-	commits, err := git.GetCommitsBetween(startDate, endDate)
-	if err != nil {
-		log.Fatalf("Failed to get commits, error: %#v", err)
-	}
-	if err := releaseman.WriteChangelog(commits, relevantTags, config, appendChangelog); err != nil {
-		log.Fatalf("Failed to write Changelog, error: %#v", err)
-	}
+	generateChangelog(config)
 
 	fmt.Println()
 	log.Infoln(colorstring.Greenf("v%s Changelog created (%s) 🚀", config.Release.Version, config.Changelog.Path))

@@ -46,6 +46,40 @@ func collectReleaseConfigParams(config releaseman.Config, c *cli.Context) (relea
 	return config, nil
 }
 
+func generateRelease(config releaseman.Config) {
+	fmt.Println()
+	log.Infof("=> Adding changes to git...")
+	changes, err := git.GetChangedFiles()
+	if err != nil {
+		log.Fatalf("Failed to get changes, error: %s", err)
+	}
+	if err := git.Add(changes); err != nil {
+		log.Fatalf("Failed to git add, error: %s", err)
+	}
+	if err := git.Commit(fmt.Sprintf("v%s", config.Release.Version)); err != nil {
+		log.Fatalf("Failed to git commit, error: %s", err)
+	}
+
+	fmt.Println()
+	log.Infof("=> Merging changes into release branch...")
+	if err := git.CheckoutBranch(config.Release.ReleaseBranch); err != nil {
+		log.Fatalf("Failed to git checkout, error: %s", err)
+	}
+	mergeCommitMessage := fmt.Sprintf("Merge %s into %s, release: v%s", config.Release.DevelopmentBranch, config.Release.ReleaseBranch, config.Release.Version)
+	if err := git.Merge(config.Release.DevelopmentBranch, mergeCommitMessage); err != nil {
+		log.Fatalf("Failed to git merge, error: %s", err)
+	}
+
+	fmt.Println()
+	log.Infof("=> Tagging release branch...")
+	if err := git.Tag(config.Release.Version); err != nil {
+		log.Fatalf("Failed to git tag, error: %s", err)
+	}
+	if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
+		log.Fatalf("Failed to git checkout, error: %s", err)
+	}
+}
+
 //=======================================
 // Main
 //=======================================
@@ -108,37 +142,7 @@ func createRelease(c *cli.Context) {
 
 	//
 	// Create release git changes
-	fmt.Println()
-	log.Infof("=> Adding changes to git...")
-	changes, err := git.GetChangedFiles()
-	if err != nil {
-		log.Fatalf("Failed to get changes, error: %s", err)
-	}
-	if err := git.Add(changes); err != nil {
-		log.Fatalf("Failed to git add, error: %s", err)
-	}
-	if err := git.Commit(fmt.Sprintf("v%s", config.Release.Version)); err != nil {
-		log.Fatalf("Failed to git commit, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("=> Merging changes into release branch...")
-	if err := git.CheckoutBranch(config.Release.ReleaseBranch); err != nil {
-		log.Fatalf("Failed to git checkout, error: %s", err)
-	}
-	mergeCommitMessage := fmt.Sprintf("Merge %s into %s, release: v%s", config.Release.DevelopmentBranch, config.Release.ReleaseBranch, config.Release.Version)
-	if err := git.Merge(config.Release.DevelopmentBranch, mergeCommitMessage); err != nil {
-		log.Fatalf("Failed to git merge, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("=> Tagging release branch...")
-	if err := git.Tag(config.Release.Version); err != nil {
-		log.Fatalf("Failed to git tag, error: %s", err)
-	}
-	if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
-		log.Fatalf("Failed to git checkout, error: %s", err)
-	}
+	generateRelease(config)
 
 	fmt.Println()
 	log.Infoln(colorstring.Greenf("v%s released 🚀", config.Release.Version))
