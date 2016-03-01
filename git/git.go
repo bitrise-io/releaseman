@@ -300,6 +300,7 @@ func GetCommitsBetween(startDate, endDate time.Time) ([]CommitModel, error) {
 		}
 
 		if isRelevantCommit && endDate.Sub(commit.Date) < 0 {
+			relevantCommits = append(relevantCommits, commit)
 			break
 		}
 	}
