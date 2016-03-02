@@ -4,6 +4,10 @@
 
 ### 0.9.1 (2016 Mar 02)
 
+* [4fb0369] bitrise.yml updates
+* [a945277] release fix
+* [50f8323] Merge develop into master, release: v0.9.1
+* [b2d1553] v0.9.1
 * [2f74287] logging fix
 * [3f198a1] create release on develop
 * [f2ef38d] Merge branch 'develop'
@@ -21,10 +25,10 @@
 
 * [67600e0] Merge develop into master, release: v0.9.0
 * [b0d011c] v0.9.0
-* [3f37a5a] test fixes
-* [1ddc416] godeps update
-* [43c9f60] create custom release version workflow added
 * [593e250] default values at user inputs
+* [3f37a5a] test fixes
+* [43c9f60] create custom release version workflow added
+* [1ddc416] godeps update
 * [fd2ecac] bump last version's patch part by default
 * [8e19279] NEW: changelog header and footer support
 * [a7c5ee6] FIX: parsing git commits
@@ -64,8 +68,8 @@
 * [35d931f] Merge pull request #3 from godrei/master
 * [7f75607] Merge branch 'develop'
 * [f58922e] release fixes
-* [e188d8e] Merge develop into master, release: v0.0.3
 * [96d5a94] v0.0.3
+* [e188d8e] Merge develop into master, release: v0.0.3
 * [92f23ad] default template contains more options
 * [8fa62ba] Added default changelog template to release_config
 * [d90db93] Remove whitespace from changelog list
@@ -78,8 +82,8 @@
 ### 0.0.2 (2016 Feb 09)
 
 * [e97a9d7] Merge pull request #2 from godrei/master
-* [c1b132e] v0.0.2
 * [a306ead] Merge develop into master, release: v0.0.2
+* [c1b132e] v0.0.2
 * [85faaea] FIX: release config
 * [3ed6cd1] init release configurations
 * [acefed0] cleanup
@@ -88,12 +92,12 @@
 * [695967b] code review, some refractors
 * [765b440] godep save
 * [c5c9687] go test added
+* [32b0c3b] FIX: init save template path too
 * [b9d13d9] new changelog template
 * [539ce94] NEW: separated commands for creating changelog and release
 * [f9a18e2] author and commit date added to changelog
 * [8e4a13b] list already exist tags befor asking for next version, fail if next version already exist
 * [da584a7] NEW: changelog template support
-* [32b0c3b] FIX: init save template path too
 * [0795d1c] release config changes, changelog moved to _changelog
 * [d86daf6] create release config and changelog with go template
 * [1c3191d] FIX: changelog generation

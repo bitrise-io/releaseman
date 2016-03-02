@@ -113,9 +113,39 @@ workflows:
 
             Build URL: ${BITRISE_BUILD_URL}
 
+
+  create-bin:
+    steps:
+    - script:
+        title:
+        inputs:
+        - content: |
+            #!/bin/bash
+
+            set -e
+
+            # Create bins
+            rm -rf ./_bin/tmp-bins/
+
+            export ARCH=x86_64
+            export GOARCH=amd64
+
+            export OS=Darwin
+            export GOOS=darwin
+            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
+            go build -o "$deploy_pth"
+
+            export OS=Linux
+            export GOOS=linux
+            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
+            go build -o "$deploy_pth"
+
+
   create-release:
     before_run:
     - _test
+    after_run:
+    - create-bin
     steps:
     - script:
         title:
@@ -132,27 +162,13 @@ workflows:
               --bump-version patch \
               --set-version-script "bash _scripts/set_version.sh version/version.go"
 
-            # Create bins
-            rm -rf ./_bin/tmp-bins/
-
-            export ARCH=x86_64
-            export GOARCH=amd64
-
-            export OS=Darwin
-            export GOOS=darwin
-            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
-            go build -o "$deploy_pth"
-
-            export OS=Linux
-            export GOOS=linux
-            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
-            go build -o "$deploy_pth"
-
   create-release-version:
     envs:
     - RELEASE_VERSION: 0.9.0
     before_run:
     - _test
+    after_run:
+    - create-bin
     steps:
     - script:
         title:
@@ -167,19 +183,3 @@ workflows:
             releaseman create \
               --version $RELEASE_VERSION \
               --set-version-script "bash _scripts/set_version.sh version/version.go"
-
-            # Create bins
-            rm -rf ./_bin/tmp-bins/
-
-            export ARCH=x86_64
-            export GOARCH=amd64
-
-            export OS=Darwin
-            export GOOS=darwin
-            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
-            go build -o "$deploy_pth"
-
-            export OS=Linux
-            export GOOS=linux
-            deploy_pth="./_bin/$BIN_NAME-$OS-$ARCH"
-            go build -o "$deploy_pth"
