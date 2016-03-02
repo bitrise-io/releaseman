@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	version "github.com/hashicorp/go-version"
 )
 
@@ -335,17 +336,17 @@ func GetCommitsFrom(startCommitPtr *CommitModel) ([]CommitModel, error) {
 	relevantCommits := []CommitModel{}
 	isRelevantCommit := false
 
-	fmt.Println("")
-	fmt.Printf("GetCommitsFrom: %v\n", startCommitPtr)
+	log.Debug("")
+	log.Debugf("GetCommitsFrom: %v\n", startCommitPtr)
 
 	for _, commit := range commits {
 		if !isRelevantCommit && startCommitPtr == nil {
-			fmt.Println("===> isRelevantCommit = true -- No start commit")
+			log.Debug("===> isRelevantCommit = true -- No start commit")
 			isRelevantCommit = true
 		}
 
 		if !isRelevantCommit && startCommitPtr != nil && (*startCommitPtr).Date.Sub(commit.Date) < 0 {
-			fmt.Println("===> isRelevantCommit = true")
+			log.Debug("===> isRelevantCommit = true")
 			isRelevantCommit = true
 		}
 
@@ -353,10 +354,10 @@ func GetCommitsFrom(startCommitPtr *CommitModel) ([]CommitModel, error) {
 			relevantCommits = append(relevantCommits, commit)
 		}
 
-		fmt.Printf("commit: %v\n", commit)
+		log.Debugf("commit: %v\n", commit)
 	}
 
-	fmt.Println("")
+	log.Debug("")
 
 	return relevantCommits, nil
 }
