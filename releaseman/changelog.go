@@ -2,6 +2,7 @@ package releaseman
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -148,11 +149,11 @@ func generateChangelogContent(commits, taggedCommits []git.CommitModel, version 
 	return content
 }
 
-func parseChangelog(changelog string) (string, string, string) {
-	log.Debug()
-	log.Debug()
-
+func parseChangelog(changelog string) (string, error) {
 	layoutLines := strings.Split(changelog, "\n")
+
+	log.Debug("")
+	log.Debugf("layoutLines: %v", layoutLines)
 
 	contentStartIdx := -1
 	contentEndIdx := -1
@@ -175,6 +176,9 @@ func parseChangelog(changelog string) (string, string, string) {
 		}
 	}
 
+	log.Debug("")
+	log.Debugf("contentStartIdx: %d", contentStartIdx)
+
 	footerStr := ""
 	for i := (len(layoutLines) - 1); i >= 0; i-- {
 		line := layoutLines[i]
@@ -191,17 +195,27 @@ func parseChangelog(changelog string) (string, string, string) {
 		}
 	}
 
+	log.Debug("")
+	log.Debugf("contentEndIdx: %d", contentEndIdx)
+
 	contentStr := ""
-	for i := contentStartIdx; i <= contentEndIdx; i++ {
-		line := layoutLines[i]
-		if contentStr == "" {
-			contentStr = line
-		} else {
-			contentStr += fmt.Sprintf("\n%s", line)
+	if contentStartIdx > -1 && contentEndIdx > -1 {
+		for i := contentStartIdx; i <= contentEndIdx; i++ {
+			line := layoutLines[i]
+			if contentStr == "" {
+				contentStr = line
+			} else {
+				contentStr += fmt.Sprintf("\n%s", line)
+			}
 		}
+	} else {
+		return "", errors.New("failed to parse footer and header")
 	}
 
-	return headerStr, footerStr, contentStr
+	log.Debug("")
+	log.Debug("contentStr: %s", contentStr)
+
+	return contentStr, nil
 }
 
 //=======================================
@@ -219,12 +233,14 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 	//
 	// Generate changelog header
 	if config.Changelog.HeaderTemplate == "" && config.Changelog.FooterTemplate == "" {
+
 		log.Debug()
 		log.Debug("Write changelog WITHOUT header and footer template")
 	}
 
 	// Header
 	if config.Changelog.HeaderTemplate != "" {
+
 		log.Debug()
 		log.Debug("Write changelog with header and footer template")
 
@@ -298,6 +314,7 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 
 	// Join header and content
 	if append {
+
 		log.Debug()
 		log.Debug("Previous changelog exist, append new conent")
 
@@ -308,26 +325,35 @@ func WriteChangelog(commits, taggedCommits []git.CommitModel, config Config, app
 
 		prevContentStr := ""
 		if config.Changelog.HeaderTemplate != "" && config.Changelog.FooterTemplate != "" {
-			_, _, prevContentStr = parseChangelog(prevChangelogStr)
+			tmpPrevContentStr, err := parseChangelog(prevChangelogStr)
+			if err != nil {
+				log.Warnf("Failed to parse previous changelog: %s", err)
+			} else {
+				prevContentStr = tmpPrevContentStr
+			}
 		} else {
 			prevContentStr = prevChangelogStr
 		}
 
 		log.Debug()
 		log.Debug("Prev content:")
+
 		for _, line := range strings.Split(prevContentStr, "\n") {
-			log.Debug("%s", line)
+			log.Debugf("%s", line)
 		}
 
 		contentStr = fmt.Sprintf("%s\n%s", newContentStr, prevContentStr)
 
 		log.Debug()
 		log.Debug("Merged content:")
+
 		contentSplits := strings.Split(contentStr, "\n")
+
 		for _, line := range contentSplits {
-			log.Debug("%s", line)
+			log.Debugf("%s", line)
 		}
 	} else {
+
 		log.Debug()
 		log.Debug("NO previous changelog exist")
 

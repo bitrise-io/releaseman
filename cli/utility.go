@@ -406,7 +406,7 @@ func printRollBackMessage() {
 	fmt.Println()
 }
 
-func printCollectingCommits(startCommit git.CommitModel, nextVersion string) {
+func printCollectingCommits(startCommit *git.CommitModel, nextVersion string) {
 	fmt.Println()
 	if startCommit.Tag != "" {
 		log.Infof("Collecting commits between (%s - %s)", startCommit.Tag, nextVersion)
