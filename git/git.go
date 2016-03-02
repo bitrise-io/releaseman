@@ -229,6 +229,9 @@ func VersionTaggedCommits() ([]CommitModel, error) {
 
 		taggedCommits = append(taggedCommits, commit)
 	}
+
+	SortByDate(taggedCommits)
+
 	return taggedCommits, nil
 }
 

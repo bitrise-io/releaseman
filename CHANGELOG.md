@@ -1,6 +1,10 @@
-## Changelog (Current version: 0.9.1)
+## Changelog (Current version: 0.9.2)
 
 -----------------
+
+### 0.9.2 (2016 Mar 02)
+
+* [d718a67] FIX: git tagged commit sort order
 
 ### 0.9.1 (2016 Mar 02)
 
