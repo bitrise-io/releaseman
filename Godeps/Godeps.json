@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/bitrise-tools/releaseman",
-	"GoVersion": "go1.5",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
 	"Packages": [
 		"./..."
 	],
@@ -32,7 +33,7 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-217-g5db7419",
+			"Comment": "v1.12.0",
 			"Rev": "5db74198dee1cfe60cf06a611d03a420361baad6"
 		},
 		{
