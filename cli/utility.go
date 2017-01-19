@@ -272,6 +272,7 @@ func fillVersion(config releaseman.Config, c *cli.Context) (releaseman.Config, e
 		if err != nil {
 			return releaseman.Config{}, err
 		}
+		log.Debugf("config.Release.Version: %s", config.Release.Version)
 	}
 
 	if c.IsSet(BumpVersionKey) {
