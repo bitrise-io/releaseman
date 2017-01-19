@@ -1,6 +1,17 @@
-## Changelog (Current version: 0.9.2)
+## Changelog (Current version: 0.9.3)
 
 -----------------
+
+### 0.9.3 (2017 Jan 19)
+
+* [30ae2fc] debug log
+* [40630bd] "development_branch" changed to "master"
+* [d801bb3] README: better "quick start guide" section
+* [61319f6] go deps update + bitrise.yml for better auto upd (#12)
+* [f1c2052] gitignore .gows.user.yml
+* [a69e883] Merge pull request #4 from bitrise-tools/godep-update
+* [5615f55] updated CI/tests config for Go 1.6+
+* [41bbbeb] migrate to vendor/
 
 ### 0.9.2 (2016 Mar 02)
 
@@ -109,4 +120,4 @@
 
 -----------------
 
-Updated: 2016 Mar 02
+Updated: 2017 Jan 19
