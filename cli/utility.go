@@ -361,7 +361,7 @@ func ensureCleanGit() error {
 	if areChanges, err := git.AreUncommitedChanges(); err != nil {
 		return err
 	} else if areChanges {
-		return errors.New("There are uncommited changes in your git, please commit your changes before continue release!")
+		return errors.New("There are uncommited changes in your git, please commit your changes before continue release")
 	}
 	return nil
 }
@@ -374,7 +374,7 @@ func ensureCurrentBranch(config releaseman.Config) error {
 
 	if config.Release.DevelopmentBranch != currentBranch {
 		if releaseman.IsCIMode {
-			return fmt.Errorf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
+			return fmt.Errorf("Your current branch (%s), should be the development branch (%s)", currentBranch, config.Release.DevelopmentBranch)
 		}
 
 		log.Warnf("Your current branch (%s), should be the development branch (%s)!", currentBranch, config.Release.DevelopmentBranch)
@@ -386,7 +386,7 @@ func ensureCurrentBranch(config releaseman.Config) error {
 		}
 
 		if !checkout {
-			return fmt.Errorf("Current branch should be the development branch (%s)!", config.Release.DevelopmentBranch)
+			return fmt.Errorf("Current branch should be the development branch (%s)", config.Release.DevelopmentBranch)
 		}
 
 		if err := git.CheckoutBranch(config.Release.DevelopmentBranch); err != nil {
