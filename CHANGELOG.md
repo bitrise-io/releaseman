@@ -1,6 +1,10 @@
-## Changelog (Current version: 0.9.3)
+## Changelog (Current version: 0.9.4)
 
 -----------------
+
+### 0.9.4 (2017 Jan 19)
+
+* [cb7b754] version fix
 
 ### 0.9.3 (2017 Jan 19)
 
