@@ -96,10 +96,14 @@ workflows:
         inputs:
         - content: |-
             #!/bin/bash
-            set -e
-            set -x
-            go get -u ./...
+            set -ex
+            go get -u github.com/tools/godep
             rm -rf ./Godeps
+            rm -rf ./vendor
+            go get -t -d ./...
+            go get golang.org/x/sys/unix
+            go get github.com/davecgh/go-spew/spew
+            go get github.com/pmezard/go-difflib/difflib
             godep save ./...
 
   ci:

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/command"
 )
 
 //=======================================
@@ -34,12 +34,12 @@ func NewPrintableCommand(commandParts ...string) PrintableCommand {
 }
 
 // Run ...
-func (command PrintableCommand) Run() (string, error) {
-	log.Debugf("=> (%#v)", command)
+func (printableCommand PrintableCommand) Run() (string, error) {
+	log.Debugf("=> (%#v)", printableCommand)
 
-	out, err := cmdex.RunCommandAndReturnCombinedStdoutAndStderr(command.Name, command.Args...)
+	out, err := command.RunCommandAndReturnCombinedStdoutAndStderr(printableCommand.Name, printableCommand.Args...)
 	if err != nil {
-		log.Fatalf("Failed to execute:\ncommand:(%s),\noutput:(%s),\nerror:(%#v)", command.RawCommand, out, err)
+		log.Fatalf("Failed to execute:\ncommand:(%s),\noutput:(%s),\nerror:(%#v)", printableCommand.RawCommand, out, err)
 	}
 	log.Debugf("output:\n(%s)", out)
 
