@@ -12,7 +12,7 @@ import (
 	"github.com/bitrise-tools/releaseman/git"
 	"github.com/bitrise-tools/releaseman/releaseman"
 	"github.com/codegangsta/cli"
-	"github.com/hashicorp/go-version"
+	version "github.com/hashicorp/go-version"
 )
 
 const (
@@ -42,15 +42,23 @@ func runSetVersionScript(script, nextVersion string) error {
 }
 
 func bumpedVersion(versionStr string, segmentIdx int) (string, error) {
-	version, err := version.NewVersion(versionStr)
+	if segmentIdx < 0 {
+		return "", fmt.Errorf("Invalid (negative) segment index: %d", segmentIdx)
+	}
+
+	ver, err := version.NewVersion(versionStr)
 	if err != nil {
 		return "", err
 	}
-	if len(version.Segments()) < segmentIdx-1 {
-		return "", fmt.Errorf("Version segments length (%d), increment segemnt at idx (%d)", len(version.Segments()), segmentIdx)
+	verSegments := ver.Segments64()
+	if segmentIdx > len(verSegments)-1 {
+		return "", fmt.Errorf("Version does not have enough segments (segments count: %d) to increment segment at idx (%d)", len(verSegments), segmentIdx)
 	}
-	version.Segments()[segmentIdx] = version.Segments()[segmentIdx] + 1
-	return version.String(), nil
+	// Segments64 can be used for changing segments, but Segments() can't!!
+	//  See: https://github.com/hashicorp/go-version/issues/24
+	ver.Segments64()[segmentIdx] = verSegments[segmentIdx] + 1
+
+	return ver.String(), nil
 }
 
 func validateVersion(versionStr string) error {
